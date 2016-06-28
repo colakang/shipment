@@ -1,0 +1,9 @@
+#ignore these files 
+
+command.php
+config.php
+database.php
+route.php
+admin/*
+captcha/*
+index/event/Shipment.php

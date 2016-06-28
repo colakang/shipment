@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		{include file="index/header" systemTitle=$systemTitle description=$description/}
+	</head>
+	<body class="no-skin">
+		{include file="index/header_menu" systemTitle=$systemTitle /}
+		<div class="main-container" id="main-container">
+			{include file="index/left_menu"  /}
+			<div class="main-content">
+				<div class="main-content-inner">
+					<div class="breadcrumbs" id="breadcrumbs">
+						<script type="text/javascript">
+							try{ace.settings.check('breadcrumbs' , 'fixed')}catch(e){}
+						</script>
+
+						<ul class="breadcrumb">
+							<li>
+								<i class="ace-icon fa fa-home home-icon"></i>
+								<a href="#">首页</a>
+							</li>
+						</ul><!-- /.breadcrumb -->
+					</div>
+
+					<div class="page-content">
+					<div class="row">
+							<div class="col-lg-2 col-md-2 col-sm-4 col-xs-6 ">
+								<!-- PAGE CONTENT BEGINS -->
+								<a href="/index/index/newLabel" class="btn btn-danger btn-app btn-lg">
+									<i class="ace-icon fa fa-plus-square bigger-230"></i>
+									新建
+								</a>
+							</div>
+							<div class="col-lg-2 col-md-2 col-sm-4 col-xs-6 ">
+								<a href="/index/index/editLabel" class="btn btn-app btn-primary btn-lg">
+									<i class="ace-icon fa fa-pencil-square-o bigger-230"></i>
+									编辑
+									<span class="badge badge-warning badge-left">{$edit+$check}</span>
+								</a>
+							</div>	
+					</div>
+					<div class="row">
+							<div class="col-lg-2 col-md-2 col-sm-4 col-xs-6 ">
+								<a href="/index/index/checkShipment" class="btn btn-yellow btn-app btn-lg">
+									<i class="ace-icon fa fa-check-square-o bigger-230"></i>
+									检查
+									<span class="badge badge-warning badge-left">{$check}</span>
+								</a>
+							</div>
+							<div class="col-lg-2 col-md-2 col-sm-4 col-xs-6 ">
+								<a href="/index/index/buyLabel" class="btn btn-app btn-success btn-lg">
+									<i class="ace-icon fa fa-credit-card bigger-230"></i>
+									购买
+									<span class="badge badge-warning badge-left">{$buying}</span>
+								</a>
+							</div>
+					</div>
+					<div class="row">
+							<div class="col-lg-2 col-md-2 col-sm-4 col-xs-6 ">
+								<a href="/index/index/rsync" class="btn btn-app btn-purple btn-lg">
+									<i class="ace-icon fa fa-cloud-download bigger-230"></i>
+									下载
+									<span class="badge badge-warning badge-left">{$rsync}</span>
+								</a>
+							</div>
+					</div>
+					</div><!-- /.page-content -->
+				</div>
+			</div><!-- /.main-content -->
+
+			{include file="index/footer"  /}
+		</div><!-- /.main-container -->
+
+		{include file="index/footer_js"  /}
+	</body>
+</html>
