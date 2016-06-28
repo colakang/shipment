@@ -90,9 +90,10 @@
     				var ar = param.split('=');
     				if (grid.length > 0 && ar.length === 2 && ar[0] === '?id') {
         				var rowid = ar[1];
+        				var code = grid.getCell(rowid, 'track_id');
         				jQuery.ajax({
             					url: '/index/warehouse/add',
-	            				data: { wid: rowid,action:aId},
+	            				data: { id: rowid,code:code,action:aId},
         	    				type: 'POST',
             					// optional contentType (depend on your server environment):
             					// contentType: 'application/json',
