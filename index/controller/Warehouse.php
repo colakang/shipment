@@ -31,10 +31,24 @@ class Warehouse extends controller
 	if (!Session::has('isLogin'))
 		return $this->error('请登陆','/index/login');
 	$uid = Session::get('uid');		
-	if (empty(Input::get('code')))
-		return "参数错误";
+        switch ($this->_method){
+        	case 'get': // get请求处理代码
+			if (empty(Input::get('code')))
+				return "参数错误";
+			else
+				$track_id = Input::get('code');
+           		break;
+        	case 'post': // post请求处理代码
+			if (empty(Input::post('code')))
+				return "Missing params!";
+			else
+				$track_id = Input::post('code');
+        		break;
+        	default:
+        		return "Unkonw Method!!";
+        		break;
+        }
 	$warehouse = new \app\index\model\ShipmentWarehouse;
-	$track_id = Input::get('code');
 	$data = $warehouse::where('track_id',$track_id)->find();
 	if (empty($data))
 	{
