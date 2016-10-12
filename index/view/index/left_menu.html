@@ -36,7 +36,7 @@
 						<span class="btn btn-danger"></span>
 					</div>
 				</div><!-- /.sidebar-shortcuts -->
-<ul class="nav nav-list">
+				<ul class="nav nav-list">
 					<li class="">
 						<a href="/index/index/newLabel" >
 							<i class="menu-icon fa fa-plus-square-o"></i>
@@ -67,8 +67,19 @@
 
 						<b class="arrow"></b>
 					</li>
+					{eq name="Think.session.uid" value="1"}
 					<li class="">
-						<a href="/index/index/buyLabel">
+						<a href="javascript:callajax('/index/index/oneClickFill','自动填单');" >
+							<i class="menu-icon fa fa-file-o"></i>
+							<span class="menu-text">自动填单</span>
+
+						</a>
+
+						<b class="arrow"></b>
+					</li>
+					{/eq}
+					<li class="">
+						<a href="javascript:callajax('/index/index/buyLabel','购买Label');">
 							<i class="menu-icon fa fa-credit-card"></i>
 							<span class="menu-text"> 购买 </span>
 
@@ -77,16 +88,48 @@
 						<b class="arrow"></b>
 					</li>
 					<li class="">
-						<a href="/index/index/rsync" >
+						<a href="#" class="dropdown-toggle">
 							<i class="menu-icon fa fa-cloud-download"></i>
-							<span class="menu-text"> 下载 </span>
+							<span class="menu-text"> 运单管理 </span>
+
+							<b class="arrow fa fa-angle-down"></b>
+						</a>
+
+						<b class="arrow"></b>
+
+						<ul class="submenu">
+							<li class="">
+								<a href="/index/index/rsync">
+									<i class="menu-icon fa fa-caret-right"></i>
+									已支付列表
+								</a>
+
+								<b class="arrow"></b>
+							</li>
+
+							<li class="">
+								<a href="/index/index/viewBatch">
+									<i class="menu-icon fa fa-caret-right"></i>
+									批量下载Label
+								</a>
+
+								<b class="arrow"></b>
+							</li>
+						</ul>
+					</li>
+					{elt name="Think.session.uid" value="2"}
+					<li class="">
+						<a href="/index/warehouse" >
+							<i class="menu-icon fa fa-truck"></i>
+							<span class="menu-text">退货管理</span>
 
 						</a>
 
 						<b class="arrow"></b>
 					</li>
-		</ul>
-<!-- /.nav-list -->
+					{/elt}
+				</ul>
+				<!-- /.nav-list -->
 
 				<div class="sidebar-toggle sidebar-collapse" id="sidebar-collapse">
 					<i class="ace-icon fa fa-angle-double-right" data-icon1="ace-icon fa fa-angle-double-left" data-icon2="ace-icon fa fa-angle-double-right"></i>

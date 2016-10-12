@@ -6,6 +6,7 @@ use \think\Session;
 use \think\Controller;
 use \think\Model;
 use \think\Input;
+use \think\Db;
 
 Session_start();
 
@@ -78,8 +79,8 @@ class Index extends controller
 	$pack = '{name:"packing",index:"packing", width:40,editable: true,edittype:"select",editoptions:{value:"';
 	foreach ($packingList::all() as $packing)
 	{
-		$tableData = str_replace('"packing":'.$packing->id,'"packing":"'.$packing->packing.'"',$tableData);
-		$pack = $pack.$packing->id.':'.$packing->packing.";";
+		$tableData = str_replace('"packing":'.$packing->id.",",'"packing":"'.$packing->name.'",',$tableData);
+		$pack = $pack.$packing->id.':'.$packing->name.";";
 	}
 	$pack = $pack.'"}},';
 	$view->tableData = $tableData;
@@ -111,8 +112,8 @@ class Index extends controller
 	$pack = '{name:"packing",index:"packing", width:40,editable: true,edittype:"select",editoptions:{value:"';
 	foreach ($packingList::all() as $packing)
 	{
-		$tableData = str_replace('"packing":'.$packing->id,'"packing":"'.$packing->packing.'"',$tableData);
-		$pack = $pack.$packing->id.':'.$packing->packing.";";
+		$tableData = str_replace('"packing":'.$packing->id.",",'"packing":"'.$packing->name.'",',$tableData);
+		$pack = $pack.$packing->id.':'.$packing->name.";";
 	}
 	$pack = $pack.'"}},';
 	$view->tableData = $tableData;
@@ -145,8 +146,8 @@ class Index extends controller
 	$pack = '{name:"packing",index:"packing", width:40,editable: false,edittype:"select",editoptions:{value:"';
 	foreach ($packingList::all() as $packing)
 	{
-		$tableData = str_replace('"packing":'.$packing->id,'"packing":"'.$packing->packing.'"',$tableData);
-		$pack = $pack.$packing->id.':'.$packing->packing.";";
+		$tableData = str_replace('"packing":'.$packing->id.",",'"packing":"'.$packing->name.'",',$tableData);
+		$pack = $pack.$packing->id.':'.$packing->name.";";
 	}
 	//{name:'packing',index:'packing', width:60,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
 	$pack = $pack.'"}},';
@@ -184,6 +185,54 @@ class Index extends controller
 			else 
 				$message = 'Update Success';
 			break;
+		case "print":
+			$Event = controller('Shipment','event');
+			$batch = new \app\index\model\ShipmentBatch;
+			$ids = $_POST['ids'];
+			if (count($ids)>1)
+			{
+				$shipmentList = Db::table('think_shipment')
+		                                        ->where('id','in', $ids)
+        		                                ->where('uid',$uid)
+        		                                ->where('easypost_shipment_id','not null')
+                        		                ->field('easypost_shipment_id as id')
+							->select();
+				$addBatch = $Event->createBatch($shipmentList);
+				$batch->easypost_batch_id = $addBatch->id;
+				$batch->uid = $uid;	
+				$batch->label_amount = count($ids);
+				$batch->label_list = implode(',',$ids);
+				$batch->create_time = time();
+				$batch->save();
+				$message = "Success! BatchId:".$batch->id." Qty:".count($shipmentList);
+			} else {
+				$message = "No Shipment Add To Print";
+			}
+
+			break;
+		case "rsync":
+			$ids = $_POST['ids'];
+			$result = Db::table('think_shipment')
+    					->where('id','in', $ids)
+    					->where('uid',$uid)
+    					->update(['status' => 3]);
+			if ($result==0)
+				$message = 'Update Status Error!! Pls Check Again';
+			else 
+				$message = 'Update Status Success';
+			break;
+		case "resend":
+			$ids = $_POST['ids'];
+			$result = Db::table('think_shipment')
+    					->where('id','in', $ids)
+    					->where('uid',$uid)
+    					->update(['track_id' => '','track_url' => '','list_rate' => '','rate' => '','fee' => '','easypost_shipment_id' => '','status' => 1]);
+			if ($result==0)
+				$message = 'Set Shipment Resend  Error!! Pls Check Again';
+			else 
+				$message = 'Set Shipment Resend Success';
+			break;
+
 		case "editAddress":
 			$a_id = Input::post('id');
 			$shipment_id = Input::post('shipment_id');
@@ -304,7 +353,12 @@ class Index extends controller
 	$shipment = new \app\index\model\Shipment;
 	$shipmentAddress = new \app\index\model\ShipmentAddress;
 	$packingList = new \app\index\model\ShipmentPacking;
+	$batch = new \app\index\model\ShipmentBatch;
+	$Event = controller('Shipment','event');
+	$uid = Session::get('uid');		
 	$result = array();
+	$shipmentList = array();
+	$sendId = array();
 	if (empty(Input::post('id')))
 	{
 		$sends = $shipment::all(function($query) 
@@ -345,18 +399,19 @@ class Index extends controller
 		);
 		$weight = $send->weight;
 		$service = $send->track_service;
-		$Event = controller('Shipment','event');
 		$packing = $packingList::where('id',$send->packing)->value('packing');
 		$productInfo = $send->product_info;
 		$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo);
 		try {
-			$send->list_rate = $data->selected_rate->list_rate; 
+			//$send->list_rate = $data->selected_rate->list_rate; 
+			$send->list_rate = $Event->discount($send->customer_id,$service,$data->selected_rate->list_rate,$data->selected_rate->rate,$packing);
 			$send->rate = $data->selected_rate->rate; 
 			$send->track_id = $data->tracking_code;
 			$send->track_url = $data->postage_label->label_pdf_url; 
 			$send->zone = $data->usps_zone; 
-			$send->fee = controller('Shipment','event')->getFee($send->weight_g,$send->amount,$send->type); 
+			$send->fee = $Event->getFee($send->weight_g,$send->amount,$send->type); 
 			$send->status = 2;
+			$send->easypost_shipment_id = $data->id;
 		} catch (Exception $e) {
 			var_dump($e->getMessage());
 			exit();		
@@ -366,15 +421,91 @@ class Index extends controller
 		$shipmentLog->shipmentid = $send->id;
 		$shipmentLog->log = serialize(array($data->rates,$data->selected_rate,$data->postage_label));
 		$shipmentLog->save();
-		$result[] = array('id'=> $send->id,"rate"=>$data->selected_rate->list_rate,'message'=>"Succes");
+		$result[] = array('id'=> $send->id,"rate"=>$send->list_rate,'message'=>"Succes");
+		$shipmentList[] = array('id'=>$data->id);
+		$sendId[] = $send->id;
     	}
+	if (count($sendId)>1)
+	{
+		$addBatch = $Event->createBatch($shipmentList);
+		$batch->easypost_batch_id = $addBatch->id;
+		$batch->uid = $uid;	
+		$batch->label_amount = count($sendId);
+		$batch->label_list = implode(',',$sendId);
+		$batch->create_time = time();
+		$batch->save();
+		$result[] = array('id'=> $batch->id,"batch_id"=>$batch->easypost_batch_id,'message'=>"Save");
+	}
+	return json_encode($result);
+	//$view = new View();
+	//$view->systemTitle = "候鸟湾自助系统";
+	//$view->description = "USPS 运单 LABEL 购买";
+	//$view->tableData = json_encode($result);
+	//return $view->fetch();
+   }
+
+   public function viewBatch()
+    {
+	if (!Session::has('isLogin'))
+		return $this->error('请登陆','/index/login');
+	$uid = Session::get('uid');		
+	$shipment = controller('Shipment','event');
+	$tableData = json_encode($shipment->getBatch($uid));
+	$tableData = str_replace('"status":1','"status":"创建"',$tableData);
+	$tableData = str_replace('"status":2','"status":"完成"',$tableData);
+	$tableData = str_replace('"status":3','"status":"打印"',$tableData);
 	$view = new View();
 	$view->systemTitle = "候鸟湾自助系统";
 	$view->description = "USPS 运单 LABEL 购买";
-	$view->tableData = json_encode($result);
+	$view->tableData = $tableData;
 	return $view->fetch();
-   }
+    }
 
+   public function checkBatch()
+    {
+	if (!Session::has('isLogin'))
+		return $this->error('请登陆','/index/login');
+	$uid = Session::get('uid');		
+	$batchId = Input::post('id');
+	if (empty($batchId))
+		return "Missing Paramm";
+	$shipment = controller('Shipment','event');
+	$batch = new \app\index\model\ShipmentBatch;
+	$save = $batch::get($batchId);
+	$info = $shipment->checkBatch($save->easypost_batch_id);
+	if (empty($info))
+		return "标签未创建，请稍后再尝试";
+	$save->label_url = $info;
+	$save->status = 2;
+	$save->save();
+	return "<a href='$info'>下载地址</a>";
+    }
+
+    public function saveBatch()
+    {
+	if (!Session::has('isLogin'))
+		return $this->error('请登陆','/index/login');
+	$batch = new \app\index\model\ShipmentBatch;
+	$uid = Session::get('uid');		
+	switch(Input::post('oper'))
+	{
+		case "edit":
+			$save = $batch::get(function($query) {
+				$query->where('id',Input::post('id'))->where('uid',Session::get('uid'));
+			});
+			if (Input::post('status'))
+				$save->status = Input::post('status');
+			if (!$save->save())
+				$message = 'Update Error!! Pls Check Again';
+			else 
+				$message = 'Update Success';
+				break;
+		default:
+			$message = "Opertion Not Found!";
+		
+	}
+	return $message;
+    }
    public function newLabel()
     {
 	if (!Session::has('isLogin'))
@@ -430,7 +561,9 @@ class Index extends controller
 	$shipment = new \app\index\model\Shipment;
 	$shipmentAddress = new \app\index\model\ShipmentAddress;
 	$packingList = new \app\index\model\ShipmentPacking;
+	$Event = controller('Shipment','event');
 	$result = array();
+	$uid = Session::get('uid');
 	if (empty(Input::post('shipment_id')))
 	{
 		return "请检查参数";
@@ -468,29 +601,39 @@ class Index extends controller
 		);
 		$weight = $send->weight;
 		$service = $send->track_service;
-		$Event = controller('Shipment','event');
 		$packing = $packingList::where('id',$send->packing)->value('packing');
 		$data = $Event->getListRate($from,$to,$weight,$service,$packing);
 		try {
-			$send->list_rate = $data->list_rate; 
+			$send->list_rate = $Event->discount($send->customer_id,$service,$data->list_rate,$data->rate,$packing); 
 			$send->rate = $data->rate; 
 			$send->zone = $data->usps_zone; 
-			$send->fee = controller('Shipment','event')->getFee($send->weight_g,$send->amount,$send->type); 
+			$send->easypost_shipment_id = $data->shipment_id; 
+			$send->fee = $Event->getFee($send->weight_g,$send->amount,$send->type);
 		} catch (Exception $e) {
 			var_dump($e->getMessage());
 			exit();		
 		}
-		$result[] = array('id'=> $send->id,"service"=>$data->service,"rate"=>$data->list_rate,"rate1"=>$data->rate,"Fee"=>$send->fee,'message'=>"Succes");
+		switch($uid)
+		{
+			case 1:
+				$result[] = array('id'=> $send->id,"service"=>$data->service,"rate"=>$send->list_rate,"rate1"=>$data->rate,"Fee"=>$send->fee,'message'=>"Succes");
+				break;
+			default:
+				$result[] = array('id'=> $send->id,"service"=>$data->service,"rate"=>$send->list_rate,"Fee"=>$send->fee,'message'=>"Succes");
+				break;
+		}
     	}
-	#$view = new View();
-	#$view->systemTitle = "候鸟湾自助系统";
-	#$view->description = "USPS 运单 LABEL 购买";
-	#$view->tableData = json_encode($result);
-	#return $view->fetch();
 	return json_encode($result);
    }
 
-
+	public function oneClickFill()
+	{
+		if (!Session::has('isLogin'))
+			return $this->error('请登陆','/index/login');
+		$Event = controller('Shipment','event');
+		$Event->setWeight();
+		return "Success";
+	}
 
 
 }

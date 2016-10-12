@@ -1,0 +1,116 @@
+<link rel="stylesheet" href="/assets/css/dropzone.min.css" />
+
+
+
+<div class="row">
+
+	<div class="col-xs-12">
+		<div class="widget-box">
+			<div class="widget-header">
+				<h4 class="widget-title">上传图片</h4>
+				<div class="widget-toolbar">
+					<a href="#" data-action="collapse">
+						<i class="ace-icon fa fa-chevron-up"></i>
+					</a>
+					<a href="#" data-action="close">
+						<i class="ace-icon fa fa-times"></i>
+					</a>
+				</div>
+			</div>
+			<div class="widget-body">
+				<div class="widget-main">
+					<div class="form-group">
+						<div class="col-xs-12">
+							<div class="space"></div>
+								<form action="/index/warehouse/save/oper/pics/wid/{$wid}/code/{$code}" class="dropzone" id="dropzone">
+									<div class="fallback">
+										<input name="file" type="file" multiple="" />
+									</div>
+								</form>
+							<div class="space"></div>
+						</div>
+					</div>
+					<label>
+						<span class="lbl"></span>
+					</label>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+							<div class="col-xs-12">
+								<!-- PAGE CONTENT BEGINS -->
+								<div>
+									<ul class="ace-thumbnails clearfix">
+										{volist name="photos" id="photo" empty="暂时没有图片"}
+										<li>
+											<a href="{$photo.upload_url}" title="Photo Title" data-rel="colorbox" class="cboxElement">
+												<img width="150" height="150" alt="150x150" src="{$photo.upload_url}">
+											</a>
+
+											<div class="tags">
+												{neq name="customer_id" value="0"}
+												<span class="label-holder">
+													<span class="label label-info">{$customer_id}</span>
+												</span>
+												{/neq}
+
+												<span class="label-holder">
+													<span class="label label-warning arrowed-in">{$status}</span>
+												</span>
+											</div>
+
+											<div class="tools">
+												<a href="#">
+													<i class="ace-icon fa fa-times red"></i>
+												</a>
+											</div>
+										</li>
+										{/volist}
+
+									</ul>
+								</div><!-- PAGE CONTENT ENDS -->
+							</div><!-- /.col -->
+						</div>
+
+<script src="/assets/js/dropzone.min.js"></script>
+
+
+		<script type="text/javascript">
+			jQuery(function($){
+			
+			try {
+			  Dropzone.autoDiscover = false;
+			  var myDropzone = new Dropzone("#dropzone" , {
+			    paramName: "file", // The name that will be used to transfer the file
+			    maxFilesize: 8, // MB
+				acceptedFiles:"image/*",			
+				addRemoveLinks : true,
+				dictDefaultMessage :
+				'<span class="smaller-80 bolder"><i class="ace-icon fa fa-caret-right red"></i> Drop files</span> to upload \
+				<span class="smaller-80 grey">(or click)</span> <br /> \
+				<i class="upload-icon ace-icon fa fa-cloud-upload blue fa-3x"></i>'
+			,
+				dictResponseError: 'Error while uploading file!',
+				
+				//change the previewTemplate to use Bootstrap progress bars
+				previewTemplate: "<div class=\"dz-preview dz-file-preview\">\n  <div class=\"dz-details\">\n    <div class=\"dz-filename\"><span data-dz-name></span></div>\n    <div class=\"dz-size\" data-dz-size></div>\n    <img data-dz-thumbnail />\n  </div>\n  <div class=\"progress progress-small progress-striped active\"><div class=\"progress-bar progress-bar-success\" data-dz-uploadprogress></div></div>\n  <div class=\"dz-success-mark\"><span></span></div>\n  <div class=\"dz-error-mark\"><span></span></div>\n  <div class=\"dz-error-message\"><span data-dz-errormessage></span></div>\n</div>"
+			  });
+			  
+			   $(document).one('ajaxloadstart.page', function(e) {
+					try {
+						myDropzone.destroy();
+					} catch(e) {}
+			   });
+			
+			} catch(e) {
+			  alert('Dropzone.js does not support older browsers!');
+			}
+			
+			});
+		</script>
+
+
+
