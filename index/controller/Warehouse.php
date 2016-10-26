@@ -38,6 +38,43 @@ class Warehouse extends controller
 	return $view->fetch();
     }
 
+    public function items()
+    {
+	if (!Session::has('isLogin'))
+		return $this->error('请登陆','/index/login');
+	$uid = Session::get('uid');		
+/*
+        switch ($this->_method){
+        	case 'get': // get请求处理代码
+			if (empty(Input::get('code')))
+				return "参数错误";
+			else
+				$track_id = Input::get('code');
+           		break;
+        	case 'post': // post请求处理代码
+			if (empty(Input::post('code')))
+				return "Missing params!";
+			else
+				$track_id = Input::post('code');
+        		break;
+        	default:
+        		return "Unkonw Method!!";
+        		break;
+        }
+*/
+	if (empty(Input::param('wid')))
+		return "Missing params";
+	else 
+		$wid = Input::param('wid');
+	$items = new \app\index\model\ShipmentItems;
+	$data = $items::where('wid',$wid)->select();
+	$view = new View();
+	$view->systemTitle = "候鸟湾自助系统";
+	$view->description = "USPS 运单 LABEL 购买";
+	$view->assign('items',urldecode(json_encode($data)));
+	return $view->fetch();
+    }
+
     public function add()
     {
 	if (!Session::has('isLogin'))
@@ -203,6 +240,38 @@ class Warehouse extends controller
 
     }
 
+    public function updateItem()
+    {
+	if (!Session::has('isLogin'))
+		return $this->error('请登陆','/index/login');
+	$uid = Session::get('uid');		
+	$items = new \app\index\model\ShipmentItems;
+	if (!empty($_GET['oper']))
+		$_POST['oper'] = $_GET['oper'];
+	switch(Input::param('oper'))
+	{
+		case "edit":
+			$save = $items::get(function($query) {
+				$query->where('id',Input::post('id'));
+			});
+			if (Input::post('weight_o'))
+				$save->weight_o = Input::post('weight_o');
+			if (Input::post('weight_g'))
+				$save->weight_g = Input::post('weight_g');
+			if (Input::post('qty'))
+				$save->qty = Input::post('qty');
+			if (!$save->save())
+				$message = 'Update Error!! Pls Check Again';
+			else 
+				$message = 'Update Success';
+			break;
+		default:
+			$message = "oper not match";
+			break;
+	}
+	return $message;	
+
+    }
 
 
 }

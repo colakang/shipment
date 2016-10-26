@@ -118,6 +118,56 @@
     				return that;
 			}());
 
+			var MyBaseItem = {};
+			MyBaseItem.GetAndShowUserData = function (grid,aId,param) {
+			    // param will be in the form '?id=rowId'. We need to get rowId
+    				var ar = param.split('=');
+    				if (grid.length > 0 && ar.length === 2 && ar[0] === '?id') {
+        				var rowid = ar[1];
+        				jQuery.ajax({
+            					url: '/index/warehouse/items',
+	            				data: { wid: rowid,action:aId},
+        	    				type: 'POST',
+            					// optional contentType (depend on your server environment):
+            					// contentType: 'application/json',
+            					dataType: 'html',
+            					success:function(data,st) {
+                					// TODO: construct HTML code based on data received from the server
+							bootbox.dialog({
+						                title: "核对入库数量",
+                						message: data,
+                						buttons: {
+                    							success: {
+                        							label: "保存",
+                        							className: "btn-success",
+										/*
+                        							callback: function () {
+                            								$('#items').ajaxSubmit({
+												success:	function(responseText) {
+													if (responseText)
+													{
+														//$('#send_from_id').val(responseText);
+                            											Example.show("保存成功! ID: <b>" + responseText  + "</b>");
+													} else {
+														alert('保存错误！');
+													}
+												}
+
+											});
+                        							}
+										*/
+                   							}
+                						}
+            						});
+            					},
+	            				error:function(xhr,st,err){
+        	        				alert(st + ": " + xhr.responseText);
+            					}
+        				});
+    				}
+			};
+
+
 			var MyBase = {};
 			MyBase.GetAndShowUserData = function (grid,aId,param) {
 			    // param will be in the form '?id=rowId'. We need to get rowId
@@ -226,7 +276,8 @@
 						{name:'track_id',index:'track_id',width:40, editable:false,},
 						{name:'packing',index:'packing', width:20,editable: true,editoptions:{size:"10",maxlength:"30"}},
 						{name:'amount',index:'amount', width:20, sorttype:"int", editable: true,editoptions:{size:"10",maxlength:"30"}},
-						{name:'qty',index:'qty', width:20, sorttype:"int", editable: false,},
+						//{name:'qty',index:'qty', width:20, sorttype:"int", editable: false,},
+						{name:'qty',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBaseItem.GetAndShowUserData(jQuery('#grid-table'),'qty','",addParam: "');"}},
 						{name:'create_time',index:'create_time', width:20,sorttype:"date",editable: false,},
 						{name:'expiry',index:'expiry', width:20,sorttype:"date",editable: false,},
 						{name:'pics',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'pics','",addParam: "');"}},
@@ -578,7 +629,8 @@
 						{name:'track_id',index:'track_id',width:40, editable:false,},
 						{name:'packing',index:'packing', width:20,editable: true,editoptions:{size:"10",maxlength:"30"}},
 						{name:'amount',index:'amount', width:20, sorttype:"int", editable: true,editoptions:{size:"10",maxlength:"30"}},
-						{name:'qty',index:'qty', width:20, sorttype:"int", editable: false,},
+						//{name:'qty',index:'qty', width:20, sorttype:"int", editable: false,},
+						{name:'qty',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBaseItem.GetAndShowUserData(jQuery('#grid-table'),'qty','",addParam: "');"}},
 						{name:'create_time',index:'create_time', width:20,sorttype:"date",editable: false,},
 						{name:'expiry',index:'expiry', width:20,sorttype:"date",editable: false,},
 						{name:'pics',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table-1'),'pics','",addParam: "');"}},
