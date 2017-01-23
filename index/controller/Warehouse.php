@@ -171,6 +171,8 @@ class Warehouse extends controller
 				$save->weight_g = Input::post('weight_g');
 			if (Input::post('packing'))
 				$save->packing = Input::post('packing');
+			if (Input::post('handling'))
+				$save->handling = Input::post('handling');
 			if (Input::post('status'))
 				$save->status = Input::post('status');
 			if (!$save->save())

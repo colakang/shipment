@@ -180,6 +180,8 @@ class Index extends controller
 				$save->status = Input::post('status');
 			if (Input::post('packing'))
 				$save->packing = Input::post('packing');
+			if (Input::post('hscode'))
+				$save->hscode = Input::post('hscode');
 			if (!$save->save())
 				$message = 'Update Error!! Pls Check Again';
 			else 
@@ -394,6 +396,7 @@ class Index extends controller
 			"street2" => $sendTo->address2,
 		        "city"    => $sendTo->city,
 		        "state"   => $sendTo->state,
+		        "country"   => $sendTo->country,
 		        "zip"     => $sendTo->zipcode,
 		        "phone"   => $sendTo->phone
 		);
@@ -401,7 +404,9 @@ class Index extends controller
 		$service = $send->track_service;
 		$packing = $packingList::where('id',$send->packing)->value('packing');
 		$productInfo = $send->product_info;
-		$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo);
+		$amount = $send->amount;
+		$hscode = $send->hscode;
+		$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		try {
 			//$send->list_rate = $data->selected_rate->list_rate; 
 			$send->list_rate = $Event->discount($send->customer_id,$service,$data->selected_rate->list_rate,$data->selected_rate->rate,$packing);
@@ -596,13 +601,17 @@ class Index extends controller
 			"street2" => $sendTo->address2,
 		        "city"    => $sendTo->city,
 		        "state"   => $sendTo->state,
+		        "country"   => $sendTo->country,
 		        "zip"     => $sendTo->zipcode,
 		        "phone"   => $sendTo->phone
 		);
 		$weight = $send->weight;
 		$service = $send->track_service;
+		$productInfo = $send->product_info;
+		$amount = $send->amount;
+		$hscode = $send->hscode;
 		$packing = $packingList::where('id',$send->packing)->value('packing');
-		$data = $Event->getListRate($from,$to,$weight,$service,$packing);
+		$data = $Event->getListRate($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		try {
 			$send->list_rate = $Event->discount($send->customer_id,$service,$data->list_rate,$data->rate,$packing); 
 			$send->rate = $data->rate; 

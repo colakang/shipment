@@ -55,6 +55,7 @@ class RESTful extends Rest
 					"state"=>Input::post('toState'),
 					"zipcode"=>Input::post('toZipcode'),
 					"phone"=>Input::post('toPhone'),
+					"country"=>Input::post('toCountry'),
 					"uid"=>$uId,
 					);
 			$toAddressMd5 = md5(implode("-",$toAddress)); 
@@ -112,6 +113,7 @@ class RESTful extends Rest
 					'send_from_id'=>Input::post('sendFromId'),
 					'send_to_id'=>Input::post('sendToId'),
 					'create_time'=>time(),
+					'hscode'=>Input::post('hs_code'),
 					);
 				$shipment->data($order);
 				$shipment->save();
@@ -172,7 +174,7 @@ class RESTful extends Rest
 
 			$shipment = new \app\index\model\Shipment;
 			$orderId = $shipment::where('order_id',Input::post('OrderId'))->where('customer_id',Input::post('CusCode'))->where('status',2)->find();
-			if (empty($orderId))
+			if (empty($orderId) or empty($orderId->track_id))
 			{
 				return $this->response(Input::post('OrderId'),'json',201);		
 			} else {
