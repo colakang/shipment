@@ -66,16 +66,13 @@ class Index extends controller
 		return $this->error('请登陆','/index/login');
 	$uid = Session::get('uid');		
 	$shipment = controller('Shipment','event');
+	$other = controller('Other','event');
 	$packingList = new \app\index\model\ShipmentPacking;
 	$tableData = urldecode(json_encode($shipment->getRow($uid)));
 	$view = new View();
 	$view->systemTitle = "候鸟湾自助系统";
 	$view->description = "USPS 运单 LABEL 购买";
-	$tableData = str_replace('"type":1','"type":"仓库运单"',$tableData);
-	$tableData = str_replace('"type":2','"type":"退货运单"',$tableData);
-	$tableData = str_replace('"type":3','"type":"自助运单"',$tableData);
-	$tableData = str_replace('"buy":1','"buy":"是"',$tableData);
-	$tableData = str_replace('"buy":2','"buy":"否"',$tableData);
+	$tableData = $other->replace($tableData);
 	$pack = '{name:"packing",index:"packing", width:40,editable: true,edittype:"select",editoptions:{value:"';
 	foreach ($packingList::all() as $packing)
 	{
@@ -99,16 +96,13 @@ class Index extends controller
 		return $this->error('请登陆','/index/login');
 	$uid = Session::get('uid');		
 	$shipment = controller('Shipment','event');
+	$other = controller('Other','event');
 	$packingList = new \app\index\model\ShipmentPacking;
 	$tableData = urldecode(json_encode($shipment->getRow($uid)));
 	$view = new View();
 	$view->systemTitle = "候鸟湾自助系统";
 	$view->description = "USPS 运单 LABEL 购买";
-	$tableData = str_replace('"type":1','"type":"仓库运单"',$tableData);
-	$tableData = str_replace('"type":2','"type":"退货运单"',$tableData);
-	$tableData = str_replace('"type":3','"type":"自助运单"',$tableData);
-	$tableData = str_replace('"buy":1','"buy":"是"',$tableData);
-	$tableData = str_replace('"buy":2','"buy":"否"',$tableData);
+	$tableData = $other->replace($tableData);
 	$pack = '{name:"packing",index:"packing", width:40,editable: true,edittype:"select",editoptions:{value:"';
 	foreach ($packingList::all() as $packing)
 	{
@@ -133,16 +127,13 @@ class Index extends controller
 		return $this->error('请登陆','/index/login');
 	$uid = Session::get('uid');		
 	$shipment = controller('Shipment','event');
+	$other = controller('Other','event');
 	$packingList = new \app\index\model\ShipmentPacking;
 	$tableData = urldecode(json_encode($shipment->getBuidLabel($uid)));
 	$view = new View();
 	$view->systemTitle = "候鸟湾自助系统";
 	$view->description = "USPS 运单 LABEL 购买";
-	$tableData = str_replace('"type":1','"type":"仓库运单"',$tableData);
-	$tableData = str_replace('"type":2','"type":"退货运单"',$tableData);
-	$tableData = str_replace('"type":3','"type":"自助运单"',$tableData);
-	$tableData = str_replace('"status":2','"status":"否"',$tableData);
-	$tableData = str_replace('"status":3','"status":"是"',$tableData);
+	$tableData = $other->replace($tableData);
 	$pack = '{name:"packing",index:"packing", width:40,editable: false,edittype:"select",editoptions:{value:"';
 	foreach ($packingList::all() as $packing)
 	{
@@ -182,6 +173,10 @@ class Index extends controller
 				$save->packing = Input::post('packing');
 			if (Input::post('hscode'))
 				$save->hscode = Input::post('hscode');
+			if (Input::post('pickup'))
+				$save->pickup = Input::post('pickup');
+			if (Input::post('type'))
+				$save->type = Input::post('type');
 			if (!$save->save())
 				$message = 'Update Error!! Pls Check Again';
 			else 
@@ -401,11 +396,15 @@ class Index extends controller
 		        "phone"   => $sendTo->phone
 		);
 		$weight = $send->weight;
+		if ($weight==16)
+			$weight = 15.9;		//设置first class 16oz的计费重量
 		$service = $send->track_service;
 		$packing = $packingList::where('id',$send->packing)->value('packing');
 		$productInfo = $send->product_info;
 		$amount = $send->amount;
 		$hscode = $send->hscode;
+		$pickup = $send->pickup;
+		$pickupFees = 3;		//设置上门提货费用;
 		$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		try {
 			//$send->list_rate = $data->selected_rate->list_rate; 
@@ -418,9 +417,18 @@ class Index extends controller
 			$send->status = 2;
 			$send->easypost_shipment_id = $data->id;
 		} catch (Exception $e) {
-			var_dump($e->getMessage());
-			exit();		
+			//var_dump($e->getMessage());
+			$result[] = array('id'=> $send->id,'message'=>"Faile");
+			break;
+			//exit();		
 		}
+		switch($service)
+		{
+			case ('FEDEX_GROUND'):
+				if ($pickup==1)
+					$send->list_rate = $send->list_rate+$pickupFees;
+				break;
+		}	
  		$send->save();
 		$shipmentLog = new \app\index\model\ShipmentLog;
 		$shipmentLog->shipmentid = $send->id;
@@ -606,10 +614,14 @@ class Index extends controller
 		        "phone"   => $sendTo->phone
 		);
 		$weight = $send->weight;
+		//if ($weight==16)
+		//	$weight = 15.9;		//设置first class 16oz的计费重量
 		$service = $send->track_service;
 		$productInfo = $send->product_info;
 		$amount = $send->amount;
 		$hscode = $send->hscode;
+		$pickup = $send->pickup;
+		$pickupFees = 3;		//设置上门提货费用;
 		$packing = $packingList::where('id',$send->packing)->value('packing');
 		$data = $Event->getListRate($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		try {
@@ -618,9 +630,16 @@ class Index extends controller
 			$send->zone = $data->usps_zone; 
 			$send->easypost_shipment_id = $data->shipment_id; 
 			$send->fee = $Event->getFee($send->weight_g,$send->amount,$send->type);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			var_dump($e->getMessage());
 			exit();		
+		}
+		switch($service)
+		{
+			case ('FEDEX_GROUND'):
+				if ($pickup==1)
+					$send->list_rate = $send->list_rate+$pickupFees;
+				break;
 		}
 		switch($uid)
 		{

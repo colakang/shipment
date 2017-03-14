@@ -176,7 +176,7 @@
 					data: grid_data,
 					datatype: "local",
 					height: 265,
-					colNames:['ID', '客户ID','订单ID','数量', '追踪号','收件人','发货渠道',"包材","计费重量:G",'Zone','邮费','处理费',"同步","类型","下载"],
+					colNames:['ID', '客户ID','订单ID','数量', '追踪号','收件人','发货渠道',"包材","计费重量:G",'Zone','邮费','处理费',"同步","提货","类型","下载"],
 					colModel:[
 /*
 						{name:'myac',index:'', width:70, fixed:true, sortable:false, resize:false,
@@ -204,15 +204,16 @@
 						{name:'zone',index:'zone', width:20,editable: false},
 						{name:'list_rate',index:'list_rate', width:30,editable: false,editoptions:{size:"20",maxlength:"30"}},
 						{name:'fee',index:'fee', width:30,editable: false,editoptions:{size:"20",maxlength:"30"}},
-						{name:"status",index:"status", width:30,editable: false,},
+						{name:"status",index:"status", width:20,editable: false,},
+						{name:"pickup",index:"pickup", width:20,editable: false,},
 						{name:'type',index:'type', width:40,editable: false,editoptions:{size:"20",maxlength:"30"}},
 						{name:'track_url',index:'track_url', width:40,formatter:'link'},
 
 					], 
 			
 					viewrecords : true,
-					rowNum:20,
-					rowList:[30,50,100],
+					rowNum:100,
+					rowList:[50,75,100,200],
 					pager : pager_selector,
 					altRows: true,
 					sortname:'id',

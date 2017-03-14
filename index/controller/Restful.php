@@ -45,7 +45,19 @@ class RESTful extends Rest
 				}
 			}
 			$_POST['create_time'] = time();
-			$uId = 1;
+			if (empty($_POST['weight']))		//记录仓库订单
+			{
+				$uId = 1;
+				$weight = 0;
+				$weight_g = 0;
+				$type = 1;
+			} else {				//记录虚拟仓订单
+				$uId = 2;
+				$weight = $_POST['weight'];
+				$weight_g = $_POST['weight_g'];
+				$type = 4;
+			}
+			
 			$_POST['uid'] = $uId;
 			$toAddress = array(
 					"name"=>Input::post('toName'),
@@ -114,6 +126,9 @@ class RESTful extends Rest
 					'send_to_id'=>Input::post('sendToId'),
 					'create_time'=>time(),
 					'hscode'=>Input::post('hs_code'),
+					'weight'=>$weight,
+					'weight_g'=>$weight_g,
+					'type'=>$type,
 					);
 				$shipment->data($order);
 				$shipment->save();
