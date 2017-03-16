@@ -40,8 +40,10 @@ class Login extends controller
 		$captcha = new \think\captcha\Captcha((array)Config::get('captcha'));
         	$isCaptcha = $captcha->check($captchaCode,$captchaId);
 		$user = new \app\index\model\AuthUser;
+		$group = new \app\index\model\AuthGroup;
 		$isUser = $user::where('username',$username)->where('password',md5($password))->value('id');
 		$isUserName = $user::where('username',$username)->where('password',md5($password))->value('username');
+		$groups = $group::where('rules','like','%'.$isUser.',%')->column('id');
 		if (empty($isUser) or !$isCaptcha)
 		{
 			return $this->error('用户名或密码或验证码错误');
@@ -50,6 +52,7 @@ class Login extends controller
 			Session::set('isLogin',true);
 			Session::set('uid',$isUser);
 			Session::set('username',$isUserName);
+			Session::set('groups',$groups);
 			return $this->success('登陆成功', '/');
     		}
    	}

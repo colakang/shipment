@@ -99,30 +99,37 @@
 			
 			function callajax(url,title)
 			{
-        			jQuery.ajax({
-            				url: url,
-	            			//data: { id: rowid,code:code,action:aId},
-        	    			type: 'GET',
-            				// optional contentType (depend on your server environment):
-            				// contentType: 'application/json',
-            				dataType: 'html',
-            				success:function(data,st) {
-                				// TODO: construct HTML code based on data received from the server
-						bootbox.dialog({
-					                title: title,
-                					message: data,
-                					buttons: {
-                    						success: {
-                        						label: "关闭",
-                        						className: "btn-success",
-                   							}
-                						}
-            						});
-            				},
-	            			error:function(xhr,st,err){
-        	        			alert(st + ": " + xhr.responseText);
-            				}
-        			});
+				bootbox.confirm(title, function(result) {
+				
+					if(result)
+					{
+			     
+						jQuery.ajax({
+							url: url,
+							//data: { id: rowid,code:code,action:aId},
+							type: 'GET',
+							// optional contentType (depend on your server environment):
+							// contentType: 'application/json',
+							dataType: 'html',
+							success:function(data,st) {
+								// TODO: construct HTML code based on data received from the server
+								bootbox.dialog({
+									title: title,
+									message: data,
+									buttons: {
+										success: {
+											label: "关闭",
+											className: "btn-success",
+											}
+										}
+									});
+							},
+							error:function(xhr,st,err){
+								alert(st + ": " + xhr.responseText);
+							}
+						});
+					}
+				});
 			}
 		</script>
 

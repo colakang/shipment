@@ -15,15 +15,16 @@ class Warehouse extends controller
 	if (!Session::has('isLogin'))
 		return $this->error('请登陆','/index/login');
 	$uid = Session::get('uid');		
+	$groups = implode(",",Session::get('groups'));
 	$warehouse = controller('Warehouse','event');
-	$data = urldecode(json_encode($warehouse->getRow(1,1)));
+	$data = urldecode(json_encode($warehouse->getRow($groups,1)));
 	$data = str_replace('"status":1','"status":"待处理"',$data);
 	$data = str_replace('"status":2','"status":"已认领"',$data);
 	$data = str_replace('"status":3','"status":"已上架"',$data);
 	$data = str_replace('"status":4','"status":"已质检"',$data);
 	$data = str_replace('"status":5','"status":"已处理"',$data);
 	$data = str_replace('"status":9','"status":"已丢弃"',$data);
-	$dataC = urldecode(json_encode($warehouse->getRow(1,2,">=")));
+	$dataC = urldecode(json_encode($warehouse->getRow($groups,2,">=")));
 	$dataC = str_replace('"status":1','"status":"待处理"',$dataC);
 	$dataC = str_replace('"status":2','"status":"已认领"',$dataC);
 	$dataC = str_replace('"status":3','"status":"已上架"',$dataC);
@@ -77,9 +78,21 @@ class Warehouse extends controller
 
     public function add()
     {
-	if (!Session::has('isLogin') and Input::param('pass')!="AbcDefg")
+	if (!Session::has('isLogin') and Input::param('pass')!="AbcDefg" and Input::param('pass')!="GfeDcba")
 		return $this->error('请登陆','/index/login');
-	$uid = Input::param('pass')?1:Session::get('uid');		
+	switch (Input::param('pass'))
+	{
+		case('AbcDefg'):
+			$uid = 1;		//Fremont
+			break;
+		case('GfeDcba'):
+			$uid = 2;		//El Paso
+			break;
+
+		default:
+			$uid = Session::get('uid');		
+			break;
+	}
 /*
         switch ($this->_method){
         	case 'get': // get请求处理代码
