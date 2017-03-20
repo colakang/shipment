@@ -67,13 +67,32 @@
     				var ar = param.split('=');
     				if (grid.length > 0 && ar.length === 2 && ar[0] === '?id') {
         				var rowid = ar[1];
-        				var code = grid.getCell(rowid, 'status');
-					if (code!="创建")
+					var code = grid.getCell(rowid, 'status');
+					var reload = false;
+					switch(aId)
 					{
-						return false;
+						case "batch":
+							if (code!="创建")
+							{
+								return false;
+							}
+							var url = '/index/index/checkBatch'; 
+							var title = '批量下载Label'; 
+							reload = true;
+							break;
+						case "scanForm":
+							if (code=="创建")
+							{
+								return false;
+							}
+							var url = '/index/index/checkScanForm'; 
+							var title = '下载ScanForm'; 
+							break;
+						default:
+							return false;
 					}
-        				jQuery.ajax({
-            					url: '/index/index/checkBatch',
+	       				jQuery.ajax({
+            					url: url,
 	            				data: { id: rowid},
         	    				type: 'POST',
             					// optional contentType (depend on your server environment):
@@ -82,13 +101,17 @@
             					success:function(data,st) {
                 					// TODO: construct HTML code based on data received from the server
 							bootbox.dialog({
-						                title: "批量下载",
+						                title: title,
                 						message: data,
                 						buttons: {
                     							success: {
                         							label: "关闭",
                         							className: "btn-success",
-                        							callback: function () {location.reload();},
+                        							callback: function () 
+											{
+												if(reload)
+													location.reload();
+											},
                    								}
                 							}
             							});
@@ -148,7 +171,7 @@
 					data: grid_data,
 					datatype: "local",
 					height: 265,
-					colNames:[' ','ID', "创建时间","状态","Label数量","下载"],
+					colNames:[' ','ID', "创建时间","状态","Label数量",'ScanForm',"下载"],
 					colModel:[
 						{name:'myac',index:'', width:70, fixed:true, sortable:false, resize:false,
 							formatter:'actions', 
@@ -164,6 +187,7 @@
 						{name:'create_time',index:'create_time', width:30,sorttype:"date",editable: false,},
 						{name:'status',index:'status', width:30, editable: true,edittype:"select",editoptions:{value:"1:创建;2:完成;3:已打印;"}},
 						{name:'label_amount',index:'label_amount', width:30,editable: false,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'batch','",addParam: "');"}},
+						{name:'scan_form',index:'', width:30,editable: false,value:'view',formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'scanForm','",addParam: "');"}},
 
 						{name:'label_url',index:'label_url', width:40,formatter:'link'},
 

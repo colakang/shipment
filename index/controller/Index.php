@@ -195,15 +195,42 @@ class Index extends controller
                         		                ->field('easypost_shipment_id as id')
 							->select();
 				$addBatch = $Event->createBatch($shipmentList);
-				$batch->easypost_batch_id = $addBatch->id;
-				$batch->uid = $uid;	
-				$batch->label_amount = count($ids);
-				$batch->label_list = implode(',',$ids);
-				$batch->create_time = time();
-				$batch->save();
-				$message = "Success! BatchId:".$batch->id." Qty:".count($shipmentList);
+				try 
+				{
+					$batch->easypost_batch_id = $addBatch->id;
+					$batch->uid = $uid;	
+					$batch->label_amount = count($ids);
+					$batch->label_list = implode(',',$ids);
+					$batch->create_time = time();
+					$batch->save();
+					$message = "Success! BatchId:".$batch->id." Qty:".count($shipmentList);
+				} catch (Exception $e) {
+					$message = 'Faile';
+				}
 			} else {
 				$message = "No Shipment Add To Print";
+			}
+
+			break;
+		case "scanForm":
+			$Event = controller('Shipment','event');
+			#$batch = new \app\index\model\ShipmentBatch;
+			$ids = $_POST['ids'];
+			if (count($ids)>1)
+			{
+				$shipmentList = Db::table('think_shipment')
+		                                        ->where('id','in', $ids)
+        		                                ->where('uid',$uid)
+        		                                ->where('easypost_shipment_id','not null')
+                        		                ->field('easypost_shipment_id as id')
+							->select();
+				$addScanForm = $Event->createScanForm($shipmentList);
+				if (!empty($addScanForm))
+					$message = "Success! ScanFormId:".$addScanForm->id." Qty:".count($shipmentList)." Url:".$addScanForm->form_url;
+				else
+					$message = false;
+			} else {
+				$message = "No Shipment Add To SacnForm";
 			}
 
 			break;
@@ -492,6 +519,24 @@ class Index extends controller
 	$save->status = 2;
 	$save->save();
 	return "<a href='$info'>下载地址</a>";
+    }
+   public function checkScanForm()
+    {
+	if (!Session::has('isLogin'))
+		return $this->error('请登陆','/index/login');
+	$uid = Session::get('uid');		
+	$batchId = Input::post('id');
+	if (empty($batchId))
+		return "Missing Paramm";
+	$shipment = controller('Shipment','event');
+	$batch = new \app\index\model\ShipmentBatch;
+	$save = $batch::get($batchId);
+	$info = $shipment->checkScanForm($save->easypost_batch_id);
+	if (empty($info))
+		return "ScanForm未创建，请稍后再尝试";
+	if ($info['status']=='failed')
+		return $info['message'];
+	return "<a href=".$info["url"].">ScanForm下载地址</a>";
     }
 
     public function saveBatch()

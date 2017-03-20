@@ -382,6 +382,23 @@
 				)
 				.navButtonAdd('#grid-pager',{
 					   caption:"",
+					   title:"Add to ScanForm", 
+					   buttonicon:"fa-newspaper-o", 
+					   onClickButton: function(){ 
+							var s;
+							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
+							if (s==false)
+								return false;
+							bootbox.confirm("Print ScanForm?", function(result) {
+								if (result)
+									saveData(s,"scanForm");
+							}); 
+					   }, 
+					   position:"first"
+					}
+				)
+				.navButtonAdd('#grid-pager',{
+					   caption:"",
 					   title:"Add to Print", 
 					   buttonicon:"fa-print", 
 					   onClickButton: function(){ 
