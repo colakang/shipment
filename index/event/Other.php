@@ -16,6 +16,8 @@ class Other
 	$tableData = str_replace('"buy":2','"buy":"否"',$tableData);
 	$tableData = str_replace('"pickup":2','"pickup":"否"',$tableData);
 	$tableData = str_replace('"pickup":1','"pickup":"是"',$tableData);
+	$tableData = str_replace('"residential":2','"residential":"否"',$tableData);
+	$tableData = str_replace('"residential":1','"residential":"是"',$tableData);
 	$tableData = str_replace('"status":2','"status":"否"',$tableData);
 	$tableData = str_replace('"status":3','"status":"是"',$tableData);
 	return $tableData;

@@ -75,7 +75,7 @@
 		            		dataType: 'html',
 		            		success:function(data,st) {
 		                		// TODO: construct HTML code based on data received from the server
-							//alert(data);
+							alert(data);
 							//$('#result').html(data);
 		            			},
 			            		error:function(xhr,st,err){
@@ -176,7 +176,7 @@
 					data: grid_data,
 					datatype: "local",
 					height: 265,
-					colNames:['ID', '客户ID','订单ID','数量', '追踪号','收件人','发货渠道',"包材","计费重量:G",'Zone','邮费','处理费',"同步","提货","类型","下载"],
+					colNames:['ID', '客户ID','订单ID','数量', '追踪号','收件人','发货渠道',"包材","计费重量:G",'Zone','邮费','处理费',"同步","提货","住宅","类型","下载"],
 					colModel:[
 /*
 						{name:'myac',index:'', width:70, fixed:true, sortable:false, resize:false,
@@ -206,6 +206,7 @@
 						{name:'fee',index:'fee', width:30,editable: false,editoptions:{size:"20",maxlength:"30"}},
 						{name:"status",index:"status", width:20,editable: false,},
 						{name:"pickup",index:"pickup", width:20,editable: false,},
+						{name:"residential",index:"residential", width:20,editable: false,},
 						{name:'type',index:'type', width:40,editable: false,editoptions:{size:"20",maxlength:"30"}},
 						{name:'track_url',index:'track_url', width:40,formatter:'link'},
 
@@ -363,6 +364,24 @@
 						}
 					}
 				)
+				.navButtonAdd('#grid-pager',{
+					   caption:"",
+					   title:"Get Tracking ID", 
+					   buttonicon:"fa-retweet", 
+					   onClickButton: function(){ 
+							var s;
+							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
+							if (s==false)
+								return false;
+							bootbox.confirm("Update Shipments?", function(result) {
+								if (result)
+									saveData(s,"getTrackId");
+							}); 
+					   }, 
+					   position:"first"
+					}
+				)
+
 				.navButtonAdd('#grid-pager',{
 					   caption:"",
 					   title:"Resend Shipments", 

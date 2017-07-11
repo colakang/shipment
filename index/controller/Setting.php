@@ -21,7 +21,7 @@ class Setting extends controller
 		return $this->error('请使用管理员登录','/index/login');
 
 	$startId = Input::param('id');
-	$report = Db::query("select uid,type,amount,customer_id,track_id,from_unixtime(create_time,'%Y-%m-%d') as creteAt,(rate+0.03) from think_shipment where id>".$startId);
+	$report = Db::query("select uid,type,amount,customer_id,track_id,from_unixtime(create_time,'%Y-%m-%d') as creteAt,(rate+0.03) as list_rate from think_shipment where rate!=0 and  id>".$startId);
 	echo "uid,type,amount,customer_id,track_id,creteAt,list_rate</br>";
 	foreach($report as $row=>$cell)
 	{

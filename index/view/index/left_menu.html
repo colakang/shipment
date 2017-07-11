@@ -79,7 +79,7 @@
 					</li>
 					{/eq}
 					<li class="">
-						<a href="javascript:callajax('/index/index/buyLabel','购买Label');">
+						<a href="javascript:callajax('/index/index/muBuyLabel','购买Label');">
 							<i class="menu-icon fa fa-credit-card"></i>
 							<span class="menu-text"> 购买 </span>
 
@@ -117,7 +117,7 @@
 							</li>
 						</ul>
 					</li>
-					{elt name="Think.session.uid" value="2"}
+					{notempty name="Think.session.groups"}
 					<li class="">
 						<a href="/index/warehouse" >
 							<i class="menu-icon fa fa-truck"></i>
@@ -127,7 +127,7 @@
 
 						<b class="arrow"></b>
 					</li>
-					{/elt}
+					{/notempty}
 				</ul>
 				<!-- /.nav-list -->
 

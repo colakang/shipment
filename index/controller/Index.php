@@ -175,6 +175,9 @@ class Index extends controller
 				$save->hscode = Input::post('hscode');
 			if (Input::post('pickup'))
 				$save->pickup = Input::post('pickup');
+			if (Input::post('residential'))
+				$save->residential = Input::post('residential');
+
 			if (Input::post('type'))
 				$save->type = Input::post('type');
 			if (!$save->save())
@@ -234,6 +237,73 @@ class Index extends controller
 			}
 
 			break;
+		case "getTrackId":
+			$message = [];
+			$Event = controller('Shipment','event');
+			$ids = $_POST['ids'];
+			$tArray = array();
+			switch (true)
+			{
+				case (count($ids)>1):
+				{
+					$shipmentList = Db::table('think_shipment')
+			                                        ->where('id','in', $ids)
+	        		                                ->where('uid',$uid)
+	        		                                ->where('easypost_shipment_id','not null')
+	        		                                #->where('track_id','')
+	                        		                ->field('easypost_shipment_id as id')
+								->select();
+					$st = microtime(true);
+					foreach ($shipmentList as $key=>$sh_id)
+					{
+						
+						$t = new Muprocess($Event,'getTrackId',$sh_id);
+						$t->start();
+						printf("No %s Request took %f seconds to start \n", $sh_id['id'],microtime(true)-$st);
+						$tArray[] = $t;
+					}
+					foreach ($tArray as $tKey=>$tValue)
+					{
+						printf("No %s Request took %f seconds to working \n", $tKey,microtime(true)-$st);
+						while($tArray[$tKey]->isRunning())
+						{
+							usleep(10);
+						}
+						printf("No %s Request took %f seconds to finish \n", $tKey,microtime(true)-$st);
+						if($tArray[$tKey]->join())
+							$message[] = array('id'=> $tKey,'message'=>$tArray[$tKey]->getResults());
+						printf("No %s Request took %f seconds to Done \n", $tKey,microtime(true)-$st);
+					}
+					break;
+				}
+				case (count($ids)==1):
+				{
+					$shipmentList = Db::table('think_shipment')
+			                                        ->where('id', $ids[0])
+	        		                                ->where('uid',$uid)
+	        		                                ->where('easypost_shipment_id','not null')
+	        		                                ->where('track_id','')
+	                        		                ->field('easypost_shipment_id as id')
+								->select();
+					foreach ($shipmentList as $key=>$sh_id)
+					{
+						$getTrackID = $Event->getTrackId($sh_id);
+						if (!empty($getTrackID))
+							$message[] = array('id'=> $ids[$key],'message'=>$getTrackID);
+						else
+							$message[] = array('id'=> $ids[$key],'message'=>"false");
+					}
+					break;
+				}
+
+				default:
+					$message[] = "No Shipments need To update";
+					break;
+			}
+
+			$message = json_encode($message);
+			break;
+
 		case "rsync":
 			$ids = $_POST['ids'];
 			$result = Db::table('think_shipment')
@@ -361,12 +431,217 @@ class Index extends controller
 				$message = '删除失败';
 			}
 			break;
+		case "freelabel":
+			$message = [];
+			$Event = controller('Shipment','event');
+			$lists = $shipment::all(function($query) {
+				$query->where('id','in',$_POST['ids'])
+					->where('uid',Session::get('uid'))
+					->where('status',1)
+					->where('weight_g','>',0)
+					->where('track_id','<>','')
+					->field('id,weight_g,amount,type,track_id');
+			});
+			foreach($lists as $send)
+			{		
+				$fees = $Event->getFee($send->weight_g,$send->amount,$send->type); 
+				$result = Db::table('think_shipment')
+    					->where('id', $send->id)
+    					->where('uid',$uid)
+    					->update(['list_rate' => '0','rate' => '0','fee' => $fees,'status' => 2]);
+				if ($result==0)
+					$message[] = array('id'=> $send->id,'message'=>"Faile");
+				else 
+					$message[] = array('id'=> $send->id,'message'=>"Success");
+			}
+			$message = json_encode($message);
+			break;
+		case "fbalabel":
+			$message = [];
+			$Event = controller('Shipment','event');
+			$lists = $shipment::all(function($query) {
+				$query->where('id','in',$_POST['ids'])
+					->where('uid',Session::get('uid'))
+					->where('status',1)
+					->where('weight_g','>',0)
+					->where('track_id','<>','')
+					->field('id,weight_g,amount,type,track_id');
+			});
+			foreach($lists as $send)
+			{		
+				$result = Db::table('think_shipment')
+    					->where('id', $send->id)
+    					->where('uid',$uid)
+    					->update(['list_rate' => '0','rate' => '0','fee' => '0','status' => 2]);
+				if ($result==0)
+					$message[] = array('id'=> $send->id,'message'=>"Faile");
+				else 
+					$message[] = array('id'=> $send->id,'message'=>"Success");
+			}
+			$message = json_encode($message);
+			break;
+
 		default:
 			$message = "Opertion Not Found!";
 		
 	}
 	return $message;	
     }
+
+    public function muBuyLabel()
+    {
+	//$rules = new \app\index\model\AuthRule;
+	if (!Session::has('isLogin'))
+		return $this->error('请登陆','/index/login');
+	$shipment = new \app\index\model\Shipment;
+	$shipmentAddress = new \app\index\model\ShipmentAddress;
+	$packingList = new \app\index\model\ShipmentPacking;
+	$batch = new \app\index\model\ShipmentBatch;
+	$Event = controller('Shipment','event');
+	$uid = Session::get('uid');		
+	$result = array();
+	$shipmentList = array();
+	$sendId = array();
+	$tArray = array();
+	if (empty(Input::post('id')))
+	{
+		$sends = $shipment::all(function($query) 
+		{
+			//$query->where('uid',Session::get('uid'))->where('buy',1)->where('status',1)->where('weight','>',0);
+			$query->where('uid',Session::get('uid'))->where('buy',1)->where('status',1)->where('weight','>',0);
+		});
+	} else {
+		$sends = $shipment::all(function($query) 
+		{
+			$query->where('id',Input::post('id'))->where('uid',Session::get('uid'))->where('buy',1)->where('status',1)->where('weight','>',0);
+		});
+	
+	}
+	if (empty($sends))
+		return "没有需要购买的LABEL！";
+	foreach ($sends as $send)
+	{
+		$sendFrom = $shipmentAddress::get($send->send_from_id);
+		$sendTo = $shipmentAddress::get($send->send_to_id);
+	
+		$from = array(
+        		"name"    => $sendFrom->name,
+		        "street1" => $sendFrom->address1,
+			"street2" => $sendFrom->address2,
+		        "city"    => $sendFrom->city,
+		        "state"   => $sendFrom->state,
+		        "zip"     => $sendFrom->zipcode,
+		        "phone"   => $sendFrom->phone
+		);
+		$to = array(
+         		"name"    => $sendTo->name,
+		        "street1" => $sendTo->address1,
+			"street2" => $sendTo->address2,
+		        "city"    => $sendTo->city,
+		        "state"   => $sendTo->state,
+		        "country"   => $sendTo->country,
+		        "zip"     => $sendTo->zipcode,
+		        "phone"   => $sendTo->phone
+		);
+		$weight = $send->weight;
+		if ($weight==16)
+			$weight = 15.9;		//设置first class 16oz的计费重量
+		$service = $send->track_service;
+		$packing = $packingList::where('id',$send->packing)->value('packing');
+		$productInfo = $send->product_info;
+		$amount = $send->amount;
+		$hscode = $send->hscode;
+		$pickup = $send->pickup;
+		$residential = $send->residential;
+		$pickupFees = 3;		//设置上门提货费用;
+		$residentialFees = 3.85;		//设置住宅派送费;
+		$orderId = $send->order_id;		//设置住宅派送费;
+		#$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
+		$buyData = compact('from','to','weight','service','packing','productInfo','amount','hscode','orderId');
+		$t = new Muprocess($Event,'buyLabel',$buyData);
+		//$t->start();
+		if ($t->start()) {
+		    /* synchronize in order to call wait */
+		    $t->synchronized(function($me){
+	                //$me->notify();
+		        $me->wait();
+		    }, $t);
+		}
+		$tArray[] = $t;
+	}
+	foreach ($tArray as $tKey=>$tValue)
+	{
+		while($tArray[$tKey]->isRunning())
+		{
+			usleep(10);
+		}
+		if($tArray[$tKey]->join())
+		{
+
+			$data = $tValue->getResults();
+
+		}
+///*
+		if(!is_array($data))
+		{
+				$result[] = array('id'=> $send->id,'data'=>$data,'message'=>"Read Error");
+		} else {
+
+			$send = $sends[$tKey];
+			try {
+				$send->list_rate = $Event->discount($send->customer_id,$service,$data["selected_list_rate"],$data["selected_rate"],$packing);
+				$send->rate = $data["selected_rate"]; 
+				$send->track_id = $data["tracking_code"];
+				$send->track_url = $data["postage_label_url"]; 
+				$send->zone = $data["usps_zone"]; 
+				$send->fee = $Event->getFee($send->weight_g,$send->amount,$send->type); 
+				$send->easypost_shipment_id = $data["id"];
+			} catch (Exception $e) {
+				//var_dump($e->getMessage());
+				$result[] = array('id'=> $send->id,'message'=>"Faile");
+				break;
+				//exit();		
+			}
+			switch($service)
+			{
+				case ('FEDEX_GROUND'):
+					if ($pickup==1)
+						$send->list_rate = $send->list_rate+$pickupFees;
+					if ($residential==1)
+						$send->list_rate = $send->list_rate+$residentialFees;
+					break;
+			}
+			$result[] = array('id'=> $send->id,"rate"=>$send->list_rate,'message'=>"Succes");
+			$shipmentList[] = array('id'=>$data["id"]);
+		}	
+			$send->status = 2;
+	 		$send->save();
+			$shipmentLog = new \app\index\model\ShipmentLog;
+			$shipmentLog->shipmentid = $send->id;
+			$shipmentLog->log = serialize($data);
+			$shipmentLog->save();
+			$sendId[] = $send->id;
+//*/
+	}
+	if (count($sendId)>1)
+	{
+		$addBatch = $Event->createBatch($shipmentList);
+		$batch->easypost_batch_id = $addBatch->id;
+		$batch->uid = $uid;	
+		$batch->label_amount = count($shipmentList);
+		$batch->label_list = implode(',',$sendId);
+		$batch->create_time = time();
+		$batch->save();
+		$result[] = array('id'=> $batch->id,"batch_id"=>$batch->easypost_batch_id,'message'=>"Save");
+	}
+	return json_encode($result);
+	//$view = new View();
+	//$view->systemTitle = "候鸟湾自助系统";
+	//$view->description = "USPS 运单 LABEL 购买";
+	//$view->tableData = json_encode($result);
+	//return $view->fetch();
+   }
+
 
 
     public function buyLabel()
@@ -431,7 +706,9 @@ class Index extends controller
 		$amount = $send->amount;
 		$hscode = $send->hscode;
 		$pickup = $send->pickup;
+		$residential = $send->residential;
 		$pickupFees = 3;		//设置上门提货费用;
+		$residentialFees = 3.85;		//设置住宅派送费;
 		$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		try {
 			//$send->list_rate = $data->selected_rate->list_rate; 
@@ -454,6 +731,8 @@ class Index extends controller
 			case ('FEDEX_GROUND'):
 				if ($pickup==1)
 					$send->list_rate = $send->list_rate+$pickupFees;
+				if ($residential==1)
+					$send->list_rate = $send->list_rate+$residentialFees;
 				break;
 		}	
  		$send->save();
@@ -659,14 +938,16 @@ class Index extends controller
 		        "phone"   => $sendTo->phone
 		);
 		$weight = $send->weight;
-		//if ($weight==16)
-		//	$weight = 15.9;		//设置first class 16oz的计费重量
+		if ($weight==16)
+			$weight = 15.9;		//设置first class 16oz的计费重量
 		$service = $send->track_service;
 		$productInfo = $send->product_info;
 		$amount = $send->amount;
 		$hscode = $send->hscode;
 		$pickup = $send->pickup;
+		$residential = $send->residential;
 		$pickupFees = 3;		//设置上门提货费用;
+		$residentialFees = 3.85;		//设置住宅派送费;
 		$packing = $packingList::where('id',$send->packing)->value('packing');
 		$data = $Event->getListRate($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		try {
@@ -684,6 +965,9 @@ class Index extends controller
 			case ('FEDEX_GROUND'):
 				if ($pickup==1)
 					$send->list_rate = $send->list_rate+$pickupFees;
+				if ($residential==1)
+					$send->list_rate = $send->list_rate+$residentialFees;
+
 				break;
 		}
 		switch($uid)
@@ -710,3 +994,40 @@ class Index extends controller
 
 
 }
+
+class Muprocess extends \Thread 
+{
+	public $ob;  
+	public $fname;  
+      	public $data;  
+	public $result;
+      	public function __construct($ob,$fname,$data)  
+      	{  
+          	$this->ob = $ob;  
+          	$this->fname = $fname;
+          	$this->data = $data;  
+      	}  
+
+    	public function run()
+	{
+	        $this->synchronized(function($me){
+	            /* there's no harm in notifying when no one is waiting */
+	            /* better that you notify no one than deadlock in any case */
+	            $me->notify();
+		    //$me->wait();
+	        }, $this);
+            	$this->result = $this->ob->{$this->fname}($this->data);
+	}
+	public function getResults() 
+	{ 
+		return $this->result; 
+	}
+	public function getData() { return $this->data; }
+	public function setOB($ob) { $this->ob = $ob; }
+	public function setFname($fname) { $this->fname = $fname; }
+	public function setData($data) { $this->data = $data; }
+
+
+}
+
+

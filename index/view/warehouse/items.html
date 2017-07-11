@@ -61,7 +61,7 @@
 					data: grid_data_3,
 					datatype: "local",
 					height: 265,
-					colNames:[' ','ID', "WID","ASN","物品名称","SKU","预报数量","实际数量"],
+					colNames:[' ','ID', "WID","ASN","物品名称","SKU","重量_oz","重量_g","预报数量","实际数量"],
 					colModel:[
 						{name:'myac',index:'', width:70, fixed:true, sortable:false, resize:false,
 							formatter:'actions', 
@@ -78,6 +78,8 @@
 						{name:'asn',index:'asn', width:30, editable: false,},
 						{name:'name',index:'name', width:30,editable: false,},
 						{name:'sku',index:'sku', width:30,editable: false,},
+						{name:'weight',index:'weight', width:30,editable: true,editoptions:{size:"10",maxlength:"30"}},
+						{name:'weight_g',index:'weight_g', width:30,editable: true,editoptions:{size:"10",maxlength:"30"}},
 						{name:'amount',index:'amount', width:30,editable: false,},
 						{name:'qty',index:'qty', width:30,editable: true,editoptions:{size:"10",maxlength:"30"}},
 					], 

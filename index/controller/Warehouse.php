@@ -16,6 +16,8 @@ class Warehouse extends controller
 		return $this->error('请登陆','/index/login');
 	$uid = Session::get('uid');		
 	$groups = implode(",",Session::get('groups'));
+	if (empty($groups))
+		return $this->error('没有访问权限','/');
 	$warehouse = controller('Warehouse','event');
 	$data = urldecode(json_encode($warehouse->getRow($groups,1)));
 	$data = str_replace('"status":1','"status":"待处理"',$data);
@@ -269,8 +271,8 @@ class Warehouse extends controller
 			$save = $items::get(function($query) {
 				$query->where('id',Input::post('id'));
 			});
-			if (Input::post('weight_o'))
-				$save->weight_o = Input::post('weight_o');
+			if (Input::post('weight'))
+				$save->weight = Input::post('weight');
 			if (Input::post('weight_g'))
 				$save->weight_g = Input::post('weight_g');
 			if (Input::post('qty') or Input::post('qty')=='0')

@@ -47,7 +47,18 @@ class RESTful extends Rest
 			$_POST['create_time'] = time();
 			if (empty($_POST['weight']))		//记录仓库订单
 			{
-				$uId = 1;
+				switch($_POST['locate'])	//分仓
+				{
+					case '288':		//Fremont仓
+						$uId = 1;
+						break;
+					case '435':		//EL Paso仓
+						$uId = 4;
+						break;
+					default:
+						$uid=1;
+						break;
+				}
 				$weight = 0;
 				$weight_g = 0;
 				$type = 1;
@@ -57,7 +68,33 @@ class RESTful extends Rest
 				$weight_g = $_POST['weight_g'];
 				$type = 4;
 			}
-			
+			switch($_POST['packing'])
+			{
+				case 'flatrateenvelope':
+					$packing = 21;
+					break;
+				case 'flatratelegalenvelope':
+					$packing = 22;
+					break;
+				case 'smallflatrateenvelope':
+					$packing = 23;
+					break;
+				case 'flatratepaddedenvelope':
+					$packing = 24;
+					break;
+				case 'smallflatratebox':
+					$packing = 2;
+					break;
+				case 'mediumflatratebox':
+					$packing = 3;
+					break;
+				case 'largeflatratebox':
+					$packing = 4;
+					break;
+				default:
+					$packing = 1;	
+
+			}	
 			$_POST['uid'] = $uId;
 			$toAddress = array(
 					"name"=>Input::post('toName'),
@@ -128,12 +165,24 @@ class RESTful extends Rest
 					'hscode'=>Input::post('hs_code'),
 					'weight'=>$weight,
 					'weight_g'=>$weight_g,
+					'packing'=>$packing,
 					'type'=>$type,
+					'track_id'=>Input::post('track_id'),
 					);
 				$shipment->data($order);
 				$shipment->save();
 				$this->response($shipment->id,'json',200);		
 			} else {
+				$order = array (
+					'product_info'=>Input::post('product_info'),
+					'amount'=>Input::post('amount'),
+					'track_service'=>Input::post('track_service'),
+					'send_from_id'=>Input::post('sendFromId'),
+					'send_to_id'=>Input::post('sendToId'),
+					'hscode'=>Input::post('hs_code'),
+					'track_id'=>Input::post('track_id'),
+					);
+				$shipment->save($order,['id'=>$orderId]);
 				$this->response($shipment->id,'json',202);		
 			}
             		break;
@@ -193,7 +242,8 @@ class RESTful extends Rest
 			{
 				return $this->response(Input::post('OrderId'),'json',201);		
 			} else {
-				$data = ['track_id'=>$orderId->track_id,'order_id'=>$orderId->order_id,'weight_g'=>$orderId->weight_g,'rate'=>$orderId->list_rate,'fees'=>$orderId->fee];
+				$weight_g = ceil((int)$orderId->weight*28.35);
+				$data = ['track_id'=>$orderId->track_id,'order_id'=>$orderId->order_id,'weight_g'=>$weight_g,'rate'=>$orderId->list_rate,'fees'=>$orderId->fee];
 				return $this->response($data,'json',200);		
 			}
             		break;

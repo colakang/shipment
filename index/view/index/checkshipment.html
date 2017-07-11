@@ -64,6 +64,30 @@
 
 		<!-- inline scripts related to this page -->
 	<script type="text/javascript">
+			function saveData(ids,action)
+			{
+				var href = "/index/index/save";
+				var oper = action;
+		        	jQuery.ajax({
+		            		url: href,
+			        	data: { ids:ids,oper:oper},
+		        		type: 'POST',
+		            		// optional contentType (depend on your server environment):
+		            		// contentType: 'application/json',
+		            		dataType: 'html',
+		            		success:function(data,st) {
+		                		// TODO: construct HTML code based on data received from the server
+							//alert(data);
+							//$('#result').html(data);
+		            			},
+			            		error:function(xhr,st,err){
+		        	        		alert(st + ": " + xhr.responseText);
+		            			}
+        			});
+
+
+			}
+
 
 			var MyBase = {};
 			MyBase.GetAndShowUserData = function (grid,aId,param) {
@@ -146,7 +170,7 @@
 					data: grid_data,
 					datatype: "local",
 					height: 250,
-					colNames:[' ','ID', '客户ID','订单ID','物品信息', '数量','海关编码', '发货渠道','邮寄重量:OZ',"计费重量:G","购买","发件人","收件人","包材","提货","类型"],
+					colNames:[' ','ID', '客户ID','订单ID','物品信息', '数量','海关编码', '发货渠道','邮寄重量:OZ',"计费重量:G","购买","发件人","收件人","包材","提货","住宅","类型"],
 					colModel:[
 						{name:'myac',index:'', width:80, fixed:true, sortable:false, resize:false,
 							formatter:'actions', 
@@ -172,6 +196,7 @@
 						{name:'send_to',index:'send_to', width:40,editable: false,editoptions:{size:"20",maxlength:"30"}},
 						{$pack}
 						{name:'pickup',index:'pickup', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
+						{name:'residential',index:'residential', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
 						{name:'type',index:'type', width:50,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'type','",addParam: "');"}},
 						//{name:'track_id',index:'track_service', width:80, formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'type','",addParam: "');"}}
 					], 
@@ -328,7 +353,41 @@
 						}
 					}
 				)
-			
+				.navButtonAdd('#grid-pager',{
+					   caption:"",
+					   title:"FreeLabel Shipments", 
+					   buttonicon:"fa-send", 
+					   onClickButton: function(){ 
+							var s;
+							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
+							if (s==false)
+								return false;
+							bootbox.confirm("Save FreeLabel Shipments?", function(result) {
+								if (result)
+									saveData(s,"freelabel");
+							}); 
+					   }, 
+					   position:"first"
+					}
+				)
+				.navButtonAdd('#grid-pager',{
+					   caption:"",
+					   title:"FBALabel Shipments", 
+					   buttonicon:"fa-home", 
+					   onClickButton: function(){ 
+							var s;
+							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
+							if (s==false)
+								return false;
+							bootbox.confirm("Save FBALabel Shipments?", function(result) {
+								if (result)
+									saveData(s,"fbalabel");
+							}); 
+					   }, 
+					   position:"first"
+					}
+				)
+
 			
 				
 				function style_edit_form(form) {

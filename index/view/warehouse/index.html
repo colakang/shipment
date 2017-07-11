@@ -95,6 +95,30 @@
 
 			}
 
+			function returnFees(ids,action)
+			{
+				var href = "/index/warehouse/returnfees";
+				var oper = action;
+		        	jQuery.ajax({
+		            		url: href,
+			        	data: { ids:ids,oper:oper},
+		        		type: 'POST',
+		            		// optional contentType (depend on your server environment):
+		            		// contentType: 'application/json',
+		            		dataType: 'html',
+		            		success:function(data,st) {
+		                		// TODO: construct HTML code based on data received from the server
+							//alert(data);
+							//$('#result').html(data);
+		            			},
+			            		error:function(xhr,st,err){
+		        	        		alert(st + ": " + xhr.responseText);
+		            			}
+        			});
+
+
+			}
+
 
 
 			var Example = (function() {
@@ -117,6 +141,32 @@
 
     				return that;
 			}());
+
+			var MyBaseReturn = {};
+			MyBaseReturn.GetAndShowUserData = function (grid,aId,param) {
+			    // param will be in the form '?id=rowId'. We need to get rowId
+    				var ar = param.split('=');
+    				if (grid.length > 0 && ar.length === 2 && ar[0] === '?id') {
+        				var rowid = ar[1];
+					alert(grid.jqGrid('getRowData', rowid));
+        				jQuery.ajax({
+            					url: '/index/warehouse/returnfees',
+	            				data: { wid: rowid,action:aId},
+        	    				type: 'POST',
+            					// optional contentType (depend on your server environment):
+            					// contentType: 'application/json',
+            					dataType: 'html',
+            					success:function(data,st) {
+                					// TODO: construct HTML code based on data received from the server
+							alert(grid);
+            					},
+	            				error:function(xhr,st,err){
+        	        				alert(st + ": " + xhr.responseText);
+            					}
+        				});
+    				}
+			};
+
 
 			var MyBaseItem = {};
 			MyBaseItem.GetAndShowUserData = function (grid,aId,param) {
@@ -259,7 +309,7 @@
 					data: grid_data,
 					datatype: "local",
 					height: 250,
-					colNames:[' ','ID', '客户ID','追踪号','外箱尺寸','货品实际数量','货品预报数量', '入库时间','过期日','图片', '进仓处理费','状态'],
+					colNames:[' ','ID', '客户ID','追踪号','外箱尺寸','货品实际数量','货品预报数量', '入库时间','过期日','图片', '进仓处理费','状态','仓库'],
 					colModel:[
 						{name:'myac',index:'', width:80, fixed:true, sortable:false, resize:false,
 							formatter:'actions', 
@@ -279,9 +329,10 @@
 						{name:'qty',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBaseItem.GetAndShowUserData(jQuery('#grid-table'),'qty','",addParam: "');"}},
 						{name:'create_time',index:'create_time', width:20,sorttype:"date",editable: false,},
 						{name:'expiry',index:'expiry', width:20,sorttype:"date",editable: false,},
-						{name:'pics',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'pics','",addParam: "');"}},
+						{name:'pics',index:'', width:10,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'pics','",addParam: "');"}},
 						{name:'handling',index:'handling', width:20,  editable: true,},
-						{name:'status',index:'status', width:30,editable: true,edittype:"select",editoptions:{value:"1:待处理;2:已认领;3:已上架;4:已质检;5:已处理;9:已丢弃"}},
+						{name:'status',index:'status', width:15,editable: true,edittype:"select",editoptions:{value:"1:待处理;2:已认领;3:已上架;4:已质检;5:已处理;9:已丢弃"}},
+						{name:'location',index:'location',width:15, editable:false,},
  
 					], 
 			
@@ -437,7 +488,24 @@
 						}
 					}
 				)
-			
+				.navButtonAdd('#grid-pager',{
+					   caption:"",
+					   title:"计算入库处理费", 
+					   buttonicon:"fa-calculator", 
+					   onClickButton: function(){ 
+							var s;
+							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
+							if (s==false)
+								return false;
+							bootbox.confirm("计算入库处理费?", function(result) {
+								if (result)
+									returnFees(s,"takeing");
+							}); 
+					   }, 
+					   position:"first"
+					}
+				);
+		
 			
 				
 				function style_edit_form(form) {
@@ -612,7 +680,7 @@
 					data: grid_data_c,
 					datatype: "local",
 					height: 250,
-					colNames:[' ','ID', '客户ID','追踪号','外箱尺寸','货品实际数量','货品预报数量','入库时间','过期日','图片','进仓处理费', '状态'],
+					colNames:[' ','ID', '客户ID','追踪号','外箱尺寸','货品实际数量','货品预报数量','入库时间','过期日','图片','进仓处理费', '状态','仓库'],
 					colModel:[
 						{name:'myac',index:'', width:80, fixed:true, sortable:false, resize:false,
 							formatter:'actions', 
@@ -633,9 +701,10 @@
 						{name:'qty',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBaseItem.GetAndShowUserData(jQuery('#grid-table'),'qty','",addParam: "');"}},
 						{name:'create_time',index:'create_time', width:20,sorttype:"date",editable: false,},
 						{name:'expiry',index:'expiry', width:20,sorttype:"date",editable: false,},
-						{name:'pics',index:'', width:20,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table-1'),'pics','",addParam: "');"}},
+						{name:'pics',index:'', width:10,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table-1'),'pics','",addParam: "');"}},
 						{name:'handling',index:'handling', width:20,  editable: true,},
-						{name:'status',index:'status', width:30,editable: true,edittype:"select",editoptions:{value:"1:待处理;2:已认领;3:已上架;4:已质检;5:已处理;9:已丢弃"}},
+						{name:'status',index:'status', width:15,editable: true,edittype:"select",editoptions:{value:"1:待处理;2:已认领;3:已上架;4:已质检;5:已处理;9:已丢弃"}},
+						{name:'location',index:'location',width:15, editable:false,},
  
 					], 
 			
