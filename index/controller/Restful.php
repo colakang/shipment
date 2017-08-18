@@ -97,9 +97,9 @@ class RESTful extends Rest
 			}	
 			$_POST['uid'] = $uId;
 			$toAddress = array(
-					"name"=>Input::post('toName'),
-					"address1"=>Input::post('toAddress1'),
-					"address2"=>Input::post('toAddress2'),
+					"name"=>urldecode(Input::post('toName')),
+					"address1"=>urldecode(Input::post('toAddress1')),
+					"address2"=>urldecode(Input::post('toAddress2')),
 					"city"=>Input::post('toCity'),
 					"state"=>Input::post('toState'),
 					"zipcode"=>Input::post('toZipcode'),
@@ -174,15 +174,15 @@ class RESTful extends Rest
 				$this->response($shipment->id,'json',200);		
 			} else {
 				$order = array (
-					'product_info'=>Input::post('product_info'),
-					'amount'=>Input::post('amount'),
-					'track_service'=>Input::post('track_service'),
-					'send_from_id'=>Input::post('sendFromId'),
-					'send_to_id'=>Input::post('sendToId'),
-					'hscode'=>Input::post('hs_code'),
-					'track_id'=>Input::post('track_id'),
-					);
-				$shipment->save($order,['id'=>$orderId]);
+							'product_info'=>Input::post('product_info'),
+							'amount'=>Input::post('amount'),
+							'track_service'=>Input::post('track_service'),
+							'send_from_id'=>Input::post('sendFromId'),
+							'send_to_id'=>Input::post('sendToId'),
+							'hscode'=>Input::post('hs_code'),
+							'track_id'=>Input::post('track_id'),
+						);
+				$shipment->save($order,['id'=>$orderId,'status'=>1]);
 				$this->response($shipment->id,'json',202);		
 			}
             		break;
@@ -473,17 +473,17 @@ class RESTful extends Rest
 			}
 			
 			$return = new \app\index\model\ShipmentWarehouse;
-			$returns = $return::where('status','2')->column('id');
+			$returns = $return::where('status','2')->order('id desc')->column('id');
 			$items = new \app\index\model\ShipmentItems;
 			$temp = array();
 			if(!empty($_GET['oper']))
 			{
-				$temp = $items::where('wid','in',$returns)->field('wid,asn')->group('asn')->select();
+				$temp = $items::where('wid','in',$returns)->field('wid,asn')->group('asn')->order('wid desc')->select();
 			} else {
-				$result = $items::where('wid','in',$returns)->field('wid,asn,sku,qty')->select();
-				foreach($result as $item)
+				$result = $items::where('wid','in',$returns)->field('wid,asn,sku,qty')->order('wid desc')->select();
+				foreach($result as $key=>$item)
 				{
-					$temp[$item['wid']][] = $item; 
+					$temp[$key][] = $item; 
 				}
 			}
 			return $this->response($temp,'json',200);		

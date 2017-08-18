@@ -27,9 +27,9 @@
 							</li>
 
 							<li>
-								仓库
+								设置
 							</li>
-							<li class="active">检查出库列表</li>
+							<li class="active">数据报表</li>
 						</ul><!-- /.breadcrumb -->
 					</div>
 
@@ -37,14 +37,15 @@
 						<div class="row">
 							<div class="col-xs-12">
 								<!-- PAGE CONTENT BEGINS -->
-								<table id="grid-table"></table>
-
-								<div id="grid-pager"></div>
-
+								<div class="row">
+									<div class="col-xs-12">
+										<table id="grid-table"></table>
+										<div id="grid-pager"></div>
+									</div>
+								</div>
 								<script type="text/javascript">
 									var $path_base = "/";//in Ace demo this will be used for editurl parameter
 								</script>
-
 								<!-- PAGE CONTENT ENDS -->
 							</div><!-- /.col -->
 						</div><!-- /.row -->
@@ -60,33 +61,29 @@
 		<script src="/assets/js/bootstrap-datepicker.min.js"></script>
 		<script src="/assets/js/jquery.jqGrid.min.js"></script>
 		<script src="/assets/js/grid.locale-en.js"></script>
-
+		<script src="/assets/js/bootbox.min.js"></script>
 		<!-- inline scripts related to this page -->
-	<script type="text/javascript">
-			function saveData(ids,action)
-			{
-				var href = "/index/index/save";
-				var oper = action;
-		        	jQuery.ajax({
-		            		url: href,
-			        	data: { ids:ids,oper:oper},
-		        		type: 'POST',
-		            		// optional contentType (depend on your server environment):
-		            		// contentType: 'application/json',
-		            		dataType: 'html',
-		            		success:function(data,st) {
-		                		// TODO: construct HTML code based on data received from the server
-							//alert(data);
-							//$('#result').html(data);
-		            			},
-			            		error:function(xhr,st,err){
-		        	        		alert(st + ": " + xhr.responseText);
-		            			}
-        			});
+		<script type="text/javascript">
+			var Example = (function() {
+    				"use strict";
 
+    				var elem,
+        			hideHandler,
+        			that = {};
 
-			}
+    				that.init = function(options) {
+        				elem = $(options.selector);
+    				};
 
+    				that.show = function(text) {
+        				clearTimeout(hideHandler);
+
+        				elem.find("span").html(text);
+        				elem.delay(200).fadeIn().delay(4000).fadeOut();
+    				};
+
+    				return that;
+			}());
 
 			var MyBase = {};
 			MyBase.GetAndShowUserData = function (grid,aId,param) {
@@ -94,25 +91,26 @@
     				var ar = param.split('=');
     				if (grid.length > 0 && ar.length === 2 && ar[0] === '?id') {
         				var rowid = ar[1];
+        				var code = grid.getCell(rowid, 'track_id');
         				jQuery.ajax({
-            					url: '/index/index/getRates',
-	            				data: { shipment_id: rowid,action:aId},
+            					url: '/index/warehouse/add',
+	            				data: { id: rowid,code:code,action:aId},
         	    				type: 'POST',
             					// optional contentType (depend on your server environment):
             					// contentType: 'application/json',
             					dataType: 'html',
             					success:function(data,st) {
                 					// TODO: construct HTML code based on data received from the server
-									bootbox.dialog({
-						                title: "运费查询",
+							bootbox.dialog({
+						                title: "上传入库图片",
                 						message: data,
                 						buttons: {
-                    						success: {
-                        						label: "关闭",
-                        						className: "btn-success",
-                   							}
-                						}
-            						});
+                    							success: {
+                        							label: "关闭",
+                        							className: "btn-success",
+                   								}
+                							}
+            							});
             					},
 	            				error:function(xhr,st,err){
         	        				alert(st + ": " + xhr.responseText);
@@ -120,9 +118,17 @@
         				});
     				}
 			};
-			
-			var grid_data = {$tableData}
-			
+        		$(function () {
+            			Example.init({
+                			"selector": ".bb-alert"
+            			});
+        		});
+	
+		</script>
+
+	<script type="text/javascript">
+			var grid_data = {$tableData};
+
 			jQuery(function($) {
 				var grid_selector = "#grid-table";
 				var pager_selector = "#grid-pager";
@@ -130,7 +136,7 @@
 				//resize to fit page size
 				$(window).on('resize.jqGrid', function () {
 					$(grid_selector).jqGrid( 'setGridWidth', $(".page-content").width() );
-			    })
+			    		})
 				//resize on sidebar collapse/expand
 				var parent_column = $(grid_selector).closest('[class*="col-"]');
 				$(document).on('settings.ace.jqGrid' , function(ev, event_name, collapsed) {
@@ -169,43 +175,23 @@
 					data: grid_data,
 					datatype: "local",
 					height: 250,
-					colNames:[' ','ID', '客户ID','订单ID','物品信息', '数量','海关编码', '发货渠道','邮寄重量:OZ',"计费重量:G","购买","发件人","收件人","包材","提货","住宅","类型"],
+					colNames:['UID', '客户ID','发货渠道','类型','当月发货数量', '总费用'],
 					colModel:[
-						{name:'myac',index:'', width:80, fixed:true, sortable:false, resize:false,
-							formatter:'actions', 
-							formatoptions:{ 
-								keys:true,
-								delbutton: true,//disable delete button
-								
-								delOptions:{recreateForm: true, beforeShowForm:beforeDeleteCallback},
-								//editformbutton:true, editOptions:{recreateForm: true, beforeShowForm:beforeEditCallback}
-							}
-						},
-						{name:'id',index:'id', width:30, sorttype:"int", editable: false},
-						{name:'customer_id',index:'customer_id', width:40, sorttype:"int", editable: false},
-						{name:'order_id',index:'order_id',width:80, editable:false,},
-						{name:'product_info',index:'product_info', width:50,editable: false,editoptions:{size:"20",maxlength:"30"}},
-						{name:'amount',index:'amount', width:20, editable: false,},
-						{name:'hscode',index:'hscode', width:50, editable: true,},
-						{name:'track_service',index:'track_service', width:50, editable: true,edittype:"select",editoptions:{value:"First:First;Priority:Priority;FEDEX_GROUND:FEDEX_GROUND;Ground:UPS_Ground;FirstClassMailInternational:FirstClassMailInternational;FirstClassPackageInternationalService:FirstClassPackageInternationalService"}},
-						{name:'weight',index:'weight', width:40, sortable:false,editable: true,sorttype:"int"},
-						{name:'weight_g',index:'weight_g', width:40, sortable:false,editable: true,sorttype:"int"},
-						{name:'buy',index:'buy', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
-						{name:'send_from',index:'send_from', width:40,editable: false,editoptions:{size:"20",maxlength:"30"}},
-						{name:'send_to',index:'send_to', width:40,editable: false,editoptions:{size:"20",maxlength:"30"}},
-						{$pack}
-						{name:'pickup',index:'pickup', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
-						{name:'residential',index:'residential', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
-						{name:'type',index:'type', width:50,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'type','",addParam: "');"}},
-						//{name:'track_id',index:'track_service', width:80, formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'type','",addParam: "');"}}
+						{name:'uid',index:'id', width:20, sorttype:"int", editable: false},
+						{name:'customer_id',index:'customer_id', width:30, sorttype:"int", editable: false},
+						{name:'track_service',index:'track_service',width:60, editable:false,},
+						{name:'type',index:'type', width:30,editable: false},
+						{name:'total',index:'total', width:30,editable: false},
+						{name:'list_rate',index:'list_rate', width:30,editable: false},
+ 
 					], 
 			
 					viewrecords : true,
-					rowNum:50,
-					rowList:[50,100,200],
+					rowNum:10,
+					rowList:[10,20,30],
 					pager : pager_selector,
 					altRows: true,
-					sortname: 'id',
+					sortname: 'customer_id',
 					sortorder: 'desc',
 					//toppager: true,
 					
@@ -224,8 +210,8 @@
 						}, 0);
 					},
 			
-					editurl: "/index/index/save",//nothing is saved
-					caption: "未处理订单",
+					editurl: "/index/setting/save",//nothing is saved
+					caption: "{php}echo date('Y年m月',strtotime('-1 months')){/php}报表",
 			
 					autowidth: true,
 			
@@ -272,13 +258,13 @@
 				//navButtons
 				jQuery(grid_selector).jqGrid('navGrid',pager_selector,
 					{ 	//navbar options
-						edit: true,
+						edit: false,
 						editicon : 'ace-icon fa fa-pencil blue',
 						add: false,
 						addicon : 'ace-icon fa fa-plus-circle purple',
 						del: false,
 						delicon : 'ace-icon fa fa-trash-o red',
-						search: false,
+						search: true,
 						searchicon : 'ace-icon fa fa-search orange',
 						refresh: false,
 						refreshicon : 'ace-icon fa fa-refresh green',
@@ -352,41 +338,7 @@
 						}
 					}
 				)
-				.navButtonAdd('#grid-pager',{
-					   caption:"",
-					   title:"FreeLabel Shipments", 
-					   buttonicon:"fa-send", 
-					   onClickButton: function(){ 
-							var s;
-							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
-							if (s==false)
-								return false;
-							bootbox.confirm("Save FreeLabel Shipments?", function(result) {
-								if (result)
-									saveData(s,"freelabel");
-							}); 
-					   }, 
-					   position:"first"
-					}
-				)
-				.navButtonAdd('#grid-pager',{
-					   caption:"",
-					   title:"FBALabel Shipments", 
-					   buttonicon:"fa-home", 
-					   onClickButton: function(){ 
-							var s;
-							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
-							if (s==false)
-								return false;
-							bootbox.confirm("Save FBALabel Shipments?", function(result) {
-								if (result)
-									saveData(s,"fbalabel");
-							}); 
-					   }, 
-					   position:"first"
-					}
-				)
-
+			
 			
 				
 				function style_edit_form(form) {
@@ -514,6 +466,8 @@
 					$('.ui-jqdialog').remove();
 				});
 			});
+
+
 		</script>
 	</body>
 </html>

@@ -10,10 +10,8 @@
 	</head>
 
 	<body class="no-skin">
-		{include file="index/header_menu" systemTitle=$systemTitle /}
 		<div class="main-container" id="main-container">
 
-			{include file="index/left_menu"  /}
 			<div class="main-content">
 				<div class="main-content-inner">
 					<div class="breadcrumbs" id="breadcrumbs">
@@ -26,17 +24,82 @@
 								首页
 							</li>
 
-							<li>
-								仓库
-							</li>
-							<li class="active">检查出库列表</li>
+							<li class="active">运费查询</li>
 						</ul><!-- /.breadcrumb -->
 					</div>
 
-					<div class="page-content">
+					<div class="page-content" id='page-content'>
 						<div class="row">
 							<div class="col-xs-12">
 								<!-- PAGE CONTENT BEGINS -->
+								<form id='myForm' name='myForm' class="form-horizontal" role="form" action='/index/index/compareRates' method='post'>
+								<div class="form-group">
+										<label class="col-xs-3 col-sm-3 control-label no-padding-right" for="toZipcode">发货仓库 </label>
+
+										<div class="col-xs-9 col-sm-9">
+											<select class="col-xs-6 col-sm-5" id="sendFrom" name="sendFrom">
+												<option value="94536">加州仓</option>
+												<option value="79925">德州仓</option>
+											</select>
+										</div>
+								</div>
+								<div class="form-group">
+										<label class="col-xs-3 col-sm-3 control-label no-padding-right" for="customer_id">客户ID </label>
+
+										<div class="col-xs-9 col-sm-9">
+											<input type="text" id="customer_id" name='customer_id' placeholder="客户ID" class="col-xs-6 col-sm-5" value="{$customer_id ?? ''}">
+										</div>
+								</div>
+
+								<div class="form-group">
+										<label class="col-xs-3 col-sm-3 control-label no-padding-right" for="toZipcode">派送邮编 </label>
+
+										<div class="col-xs-9 col-sm-9">
+											<input type="text" id="toZipcode" name='toZipcode' placeholder="{$sendTo ?? 'toZipcode'}" class="col-xs-6 col-sm-5">
+											<input type="hidden" id="sendTo" name='sendTo'  value="{$sendTo ?? ''}">
+										</div>
+								</div>
+								<div class="form-group">
+										<label class="col-xs-3 col-sm-3 control-label no-padding-right" for="toCity">派送城市 </label>
+
+										<div class="col-xs-9 col-sm-9">
+											<input type="text" id="toCity" name='toCity' placeholder="toCity" class="col-xs-6 col-sm-5" value="{$sendToCity ?? ''}">
+										</div>
+								</div>
+								<div class="form-group">
+										<label class="col-xs-3 col-sm-3 control-label no-padding-right" for="toState">派送州 </label>
+
+										<div class="col-xs-9 col-sm-9">
+											<input type="text" id="toState" name='toState' placeholder="toState" class="col-xs-6 col-sm-5" value="{$sendToState ?? ''}">
+										</div>
+								</div>
+
+								<div class="form-group">
+										<label class="col-xs-3 col-sm-3 control-label no-padding-right" for="weight">重量 </label>
+
+										<div class="col-xs-9 col-sm-9">
+											<input type="text" id="weightLbs" name='weightLbs' placeholder="Lbs" class="col-xs-2 col-sm-2" value="{$weightLbs ?? ''}"><div class='col-xs-2 col-sm-2'>(Lbs)</div>
+											<input type="text" id="weightOz" name='weightOz' placeholder="Oz" class="col-xs-2 col-sm-2" value="{$weightOz ?? ''}"><div class='col-xs-2 col-sm-2'>(Oz)</div>
+	
+										</div>
+								</div>
+
+								<div class="form-group">
+										<label class="col-xs-3 col-sm-3 control-label no-padding-right" for="packing">包材尺寸(In) </label>
+
+										<div class="col-xs-9 col-sm-9">
+											<input type="text" id="length" name='length' placeholder="长" class="col-xs-2 col-sm-2" value="{$length ?? ''}"><div class='col-xs-2 col-sm-2'>(L)</div>
+											<input type="text" id="width" name='width' placeholder="宽" class="col-xs-2 col-sm-2" value="{$width ?? ''}"><div class='col-xs-2 col-sm-2'>(W)</div>
+											<input type="text" id="height" name='height' placeholder="高" class="col-xs-2 col-sm-2" value="{$height ?? ''}"><div class='col-xs-2 col-sm-2'>(H)</div>
+										</div>
+								</div>
+								<div class="clearfix form-group">
+										<div class="col-xs-offset-5 col-sm-offset-5 col-md-offset-5 col-md-9">
+											<input class="btn btn-info" type="submit" />
+										</div>
+								</div>
+								</form>			
+								<div id='messageBox' class="alert alert-warning"></div>
 								<table id="grid-table"></table>
 
 								<div id="grid-pager"></div>
@@ -60,66 +123,10 @@
 		<script src="/assets/js/bootstrap-datepicker.min.js"></script>
 		<script src="/assets/js/jquery.jqGrid.min.js"></script>
 		<script src="/assets/js/grid.locale-en.js"></script>
-
+		<script src="https://cdn.jsdelivr.net/clipboard.js/1.5.10/clipboard.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/jquery.validation/1.15.1/jquery.validate.min.js"></script>
 		<!-- inline scripts related to this page -->
-	<script type="text/javascript">
-			function saveData(ids,action)
-			{
-				var href = "/index/index/save";
-				var oper = action;
-		        	jQuery.ajax({
-		            		url: href,
-			        	data: { ids:ids,oper:oper},
-		        		type: 'POST',
-		            		// optional contentType (depend on your server environment):
-		            		// contentType: 'application/json',
-		            		dataType: 'html',
-		            		success:function(data,st) {
-		                		// TODO: construct HTML code based on data received from the server
-							//alert(data);
-							//$('#result').html(data);
-		            			},
-			            		error:function(xhr,st,err){
-		        	        		alert(st + ": " + xhr.responseText);
-		            			}
-        			});
-
-
-			}
-
-
-			var MyBase = {};
-			MyBase.GetAndShowUserData = function (grid,aId,param) {
-			    // param will be in the form '?id=rowId'. We need to get rowId
-    				var ar = param.split('=');
-    				if (grid.length > 0 && ar.length === 2 && ar[0] === '?id') {
-        				var rowid = ar[1];
-        				jQuery.ajax({
-            					url: '/index/index/getRates',
-	            				data: { shipment_id: rowid,action:aId},
-        	    				type: 'POST',
-            					// optional contentType (depend on your server environment):
-            					// contentType: 'application/json',
-            					dataType: 'html',
-            					success:function(data,st) {
-                					// TODO: construct HTML code based on data received from the server
-									bootbox.dialog({
-						                title: "运费查询",
-                						message: data,
-                						buttons: {
-                    						success: {
-                        						label: "关闭",
-                        						className: "btn-success",
-                   							}
-                						}
-            						});
-            					},
-	            				error:function(xhr,st,err){
-        	        				alert(st + ": " + xhr.responseText);
-            					}
-        				});
-    				}
-			};
+		<script type="text/javascript">
 			
 			var grid_data = {$tableData}
 			
@@ -142,71 +149,28 @@
 					}
 			    })
 				
-				//if your grid is inside another element, for example a tab pane, you should use its parent's width:
-				/**
-				$(window).on('resize.jqGrid', function () {
-					var parent_width = $(grid_selector).closest('.tab-pane').width();
-					$(grid_selector).jqGrid( 'setGridWidth', parent_width );
-				})
-				//and also set width when tab pane becomes visible
-				$('#myTab a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-				  if($(e.target).attr('href') == '#mygrid') {
-					var parent_width = $(grid_selector).closest('.tab-pane').width();
-					$(grid_selector).jqGrid( 'setGridWidth', parent_width );
-				  }
-				})
-				*/
-				
-				
-			
-			
-			
+		
 				jQuery(grid_selector).jqGrid({
-					//direction: "rtl",
-							
-			
 			
 					data: grid_data,
 					datatype: "local",
-					height: 250,
-					colNames:[' ','ID', '客户ID','订单ID','物品信息', '数量','海关编码', '发货渠道','邮寄重量:OZ',"计费重量:G","购买","发件人","收件人","包材","提货","住宅","类型"],
+					height: 265,
+					colNames:['供应商','服务',"地址类型","费用"],
 					colModel:[
-						{name:'myac',index:'', width:80, fixed:true, sortable:false, resize:false,
-							formatter:'actions', 
-							formatoptions:{ 
-								keys:true,
-								delbutton: true,//disable delete button
-								
-								delOptions:{recreateForm: true, beforeShowForm:beforeDeleteCallback},
-								//editformbutton:true, editOptions:{recreateForm: true, beforeShowForm:beforeEditCallback}
-							}
-						},
-						{name:'id',index:'id', width:30, sorttype:"int", editable: false},
-						{name:'customer_id',index:'customer_id', width:40, sorttype:"int", editable: false},
-						{name:'order_id',index:'order_id',width:80, editable:false,},
-						{name:'product_info',index:'product_info', width:50,editable: false,editoptions:{size:"20",maxlength:"30"}},
-						{name:'amount',index:'amount', width:20, editable: false,},
-						{name:'hscode',index:'hscode', width:50, editable: true,},
-						{name:'track_service',index:'track_service', width:50, editable: true,edittype:"select",editoptions:{value:"First:First;Priority:Priority;FEDEX_GROUND:FEDEX_GROUND;Ground:UPS_Ground;FirstClassMailInternational:FirstClassMailInternational;FirstClassPackageInternationalService:FirstClassPackageInternationalService"}},
-						{name:'weight',index:'weight', width:40, sortable:false,editable: true,sorttype:"int"},
-						{name:'weight_g',index:'weight_g', width:40, sortable:false,editable: true,sorttype:"int"},
-						{name:'buy',index:'buy', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
-						{name:'send_from',index:'send_from', width:40,editable: false,editoptions:{size:"20",maxlength:"30"}},
-						{name:'send_to',index:'send_to', width:40,editable: false,editoptions:{size:"20",maxlength:"30"}},
-						{$pack}
-						{name:'pickup',index:'pickup', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
-						{name:'residential',index:'residential', width:25,editable: true,edittype:"select",editoptions:{value:"1:是;2:否;"}},
-						{name:'type',index:'type', width:50,formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'type','",addParam: "');"}},
-						//{name:'track_id',index:'track_service', width:80, formatter: 'showlink', formatoptions: { baseLinkUrl: 'javascript:',showAction: "MyBase.GetAndShowUserData(jQuery('#grid-table'),'type','",addParam: "');"}}
+						{name:'provider',index:'provier', width:30, editable: false},
+						{name:'services',index:'services', width:30, editable: false},
+						{name:'type',index:'type', width:30, editable: false},
+						{name:'birdsbay',index:'birdsbay', width:30, editable: false},
+
 					], 
 			
-					viewrecords : true,
-					rowNum:50,
-					rowList:[50,100,200],
-					pager : pager_selector,
+					viewrecords : false,
+					rowNum:10,
+					rowList:[10,20,30],
+					//pager : pager_selector,
 					altRows: true,
-					sortname: 'id',
-					sortorder: 'desc',
+					sortname:'services',
+					sortorder:'desc',
 					//toppager: true,
 					
 					multiselect: true,
@@ -224,10 +188,10 @@
 						}, 0);
 					},
 			
-					editurl: "/index/index/save",//nothing is saved
-					caption: "未处理订单",
+					//editurl: "/index/index/saveBatch",//nothing is saved
+					caption: "运费比较"
 			
-					autowidth: true,
+					,autowidth: true,
 			
 			
 					/**
@@ -272,7 +236,7 @@
 				//navButtons
 				jQuery(grid_selector).jqGrid('navGrid',pager_selector,
 					{ 	//navbar options
-						edit: true,
+						edit: false,
 						editicon : 'ace-icon fa fa-pencil blue',
 						add: false,
 						addicon : 'ace-icon fa fa-plus-circle purple',
@@ -282,7 +246,7 @@
 						searchicon : 'ace-icon fa fa-search orange',
 						refresh: false,
 						refreshicon : 'ace-icon fa fa-refresh green',
-						view: true,
+						view: false,
 						viewicon : 'ace-icon fa fa-search-plus grey',
 					},
 					{
@@ -330,7 +294,7 @@
 						recreateForm: true,
 						afterShowSearch: function(e){
 							var form = $(e[0]);
-							form.closest('.ui-jqdialog').find('.ui-jqdialog-title').wrap('<div class="widget-header" />')
+							form.closest('.ui-jqdialog').find('.ui-jqdialog-title').wrap('<div class="widget-header" />');
 							style_search_form(form);
 						},
 						afterRedraw: function(){
@@ -352,41 +316,7 @@
 						}
 					}
 				)
-				.navButtonAdd('#grid-pager',{
-					   caption:"",
-					   title:"FreeLabel Shipments", 
-					   buttonicon:"fa-send", 
-					   onClickButton: function(){ 
-							var s;
-							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
-							if (s==false)
-								return false;
-							bootbox.confirm("Save FreeLabel Shipments?", function(result) {
-								if (result)
-									saveData(s,"freelabel");
-							}); 
-					   }, 
-					   position:"first"
-					}
-				)
-				.navButtonAdd('#grid-pager',{
-					   caption:"",
-					   title:"FBALabel Shipments", 
-					   buttonicon:"fa-home", 
-					   onClickButton: function(){ 
-							var s;
-							s = jQuery("#grid-table").jqGrid('getGridParam','selarrrow');
-							if (s==false)
-								return false;
-							bootbox.confirm("Save FBALabel Shipments?", function(result) {
-								if (result)
-									saveData(s,"fbalabel");
-							}); 
-					   }, 
-					   position:"first"
-					}
-				)
-
+			
 			
 				
 				function style_edit_form(form) {
@@ -515,5 +445,163 @@
 				});
 			});
 		</script>
+<script type="text/javascript">//<![CDATA[
+	$(function() {
+		// IMPORTANT: Fill in your client key
+		var clientKey = "js-PQRNFILm756ICCExOPCdFDoxhYJlFItuykhd23za8GTLjyi7oVl3yJBQHkbm2FRB";
+		
+		var cache = {};
+		var container = $("#page-content");
+		var errorDiv = container.find("div.text-error");
+		
+		/** Handle successful response */
+		function handleResp(data)
+		{
+			// Check for error
+			if (data.error_msg)
+				errorDiv.text(data.error_msg);
+			else if ("city" in data)
+			{
+				// Set city and state
+				container.find("input[name='toCity']").val(data.city);
+				container.find("input[name='toState']").val(data.state);
+			}
+		}
+		
+		// Set up event handlers
+		container.find("input[name='toZipcode']").on("keyup change", function() {
+			// Get zip code
+			var zipcode = $(this).val().substring(0, 5);
+			if (zipcode.length == 5 && /^[0-9]+$/.test(zipcode))
+			{
+				// Clear error
+				errorDiv.empty();
+				
+				// Check cache
+				if (zipcode in cache)
+				{
+					handleResp(cache[zipcode]);
+				}
+				else
+				{
+					// Build url
+					var url = "https://www.zipcodeapi.com/rest/"+clientKey+"/info.json/" + zipcode + "/radians";
+					
+					// Make AJAX request
+					$.ajax({
+						"url": url,
+						"dataType": "json"
+					}).done(function(data) {
+						handleResp(data);
+						
+						// Store in cache
+						cache[zipcode] = data;
+					}).fail(function(data) {
+						if (data.responseText && (json = $.parseJSON(data.responseText)))
+						{
+							// Store in cache
+							cache[zipcode] = json;
+							
+							// Check for error
+							if (json.error_msg)
+								errorDiv.text(json.error_msg);
+						}
+						else
+							errorDiv.text('Request failed.');
+					});
+				}
+			}
+		}).trigger("change");
+	});
+//]]></script>
+
+<script>
+/*
+$(document).ready(function(){
+    $('#myForm').on('submit', function(e){
+        e.preventDefault();
+
+	$(".form-group").each(function () {
+		alert($(this).find('input'));
+	   if ($(this).find('input').val() == "") {
+	       //
+	   } else {
+	       status = false;//循环有一个input不为空则将status改为false
+	   }
+	});
+
+
+    });
+});
+
+*/
+
+$(function() {
+  // Initialize form validation on the registration form.
+  // It has the name attribute "registration"
+  $("form[name='myForm']").validate({
+    // Specify validation rules
+    rules: {
+      // The key name on the left side is the name attribute
+      // of an input field. Validation rules are defined
+      // on the right side
+      toCity: "required",
+      toState: "required",
+      length: {
+        required: true,
+        number: true
+      },
+      width: {
+        required: true,
+        number: true
+      },
+      height: {
+        required: true,
+        number: true
+      }
+    },
+    // Specify validation error messages
+    messages: {
+      length: {
+        required: "请输入长度",
+        number: "请输入数字"
+      },
+      width: {
+        required: "请输入宽度",
+        number: "请输入数字"
+      },
+      height: {
+        required: "请输入高度",
+        number: "请输入数字"
+      },
+      toCity:"请输入城市",
+      toState:"请输入州份",
+    },
+    errorLabelContainer: "#messageBox",
+    wrapper: "li",
+    submitHandler: function(form) {
+        var zipcodeLen = $('#toZipcode').val().length;
+        var sendToLen = $('#sendTo').val().length;
+        if (zipcodeLen == 0 && sendToLen ==0) {
+		alert('请输入Zipcode');
+            	return false;
+        }
+        var weightLbs = $('#weightLbs').val().length;
+        var weightOz = $('#weightOz').val().length;
+        if (weightLbs == 0 && weightOz ==0) {
+		alert('请输入包裹重量');
+            	return false;
+        }
+
+      form.submit();
+    }
+  });
+});
+
+
+
+</script>
+
+
 	</body>
 </html>

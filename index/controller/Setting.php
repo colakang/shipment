@@ -16,26 +16,49 @@ class Setting extends controller
     {
 	if (!Session::has('isLogin'))
 		return $this->error('请登陆','/index/login');
-	$uid = Session::get('uid');		
+	$uid = Session::get('uid');
+	$condition = false;		
 	if ($uid!=1)
-		return $this->error('请使用管理员登录','/index/login');
-
-	$startId = Input::param('id');
-	$report = Db::query("select uid,type,amount,customer_id,track_id,from_unixtime(create_time,'%Y-%m-%d') as creteAt,(rate+0.03) as list_rate from think_shipment where rate!=0 and  id>".$startId);
-	echo "uid,type,amount,customer_id,track_id,creteAt,list_rate</br>";
-	foreach($report as $row=>$cell)
+		$condition = " and uid=$uid";
+	switch(Input::Param('type'))
 	{
-		foreach($cell as $key=>$value)
+		case ('detail'):
 		{
-			if ($key == "list_rate")
-				echo $value;
-			else
-				echo $value.",";
-
+			$startId = Input::param('id');
+			$report = Db::query("select uid,type,amount,customer_id,track_id,from_unixtime(create_time,'%Y-%m-%d') as creteAt,(rate+0.03) as list_rate from think_shipment where rate!=0 and  id>".$startId);
+			echo "uid,type,amount,customer_id,track_id,creteAt,list_rate</br>";
+			foreach($report as $row=>$cell)
+			{
+				foreach($cell as $key=>$value)
+				{
+					if ($key == "list_rate")
+						echo $value;
+					else
+						echo $value.",";
+		
+				}
+				echo "</br>";
+			}
+			return false;
 		}
-		echo "</br>";
+		default:
+		{
+			$endTime = strtotime(date('Y-m'));
+			$startTime = strtotime(date('Y-m',strtotime('-1 month')));
+			$report = Db::query("select uid,track_service,type,count(id) as total,customer_id,format(sum(rate+0.03),2) as list_rate from think_shipment where rate!=0 ".$condition." and create_time>$startTime and create_time<$endTime GROUP BY customer_id,track_service,type");
+			break;
+		}
+
 	}
-	return false;
+	$other = controller('Other','event');
+	$tableData = json_encode($report);
+	$tableData = $other->replace($tableData);
+
+	$view = new View();
+	$view->systemTitle = "候鸟湾自助系统";
+	$view->description = "USPS 运单 LABEL 购买";
+	$view->tableData = $tableData;
+	return $view->fetch();
     }
 
 

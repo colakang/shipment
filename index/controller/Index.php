@@ -197,7 +197,10 @@ class Index extends controller
         		                                ->where('easypost_shipment_id','not null')
                         		                ->field('easypost_shipment_id as id')
 							->select();
-				$addBatch = $Event->createBatch($shipmentList);
+				$format = 'pdf';
+				if ($uid==1)
+					$format = 'zpl';
+				$addBatch = $Event->createBatch($shipmentList,$format);
 				try 
 				{
 					$batch->easypost_batch_id = $addBatch->id;
@@ -242,6 +245,8 @@ class Index extends controller
 			$Event = controller('Shipment','event');
 			$ids = $_POST['ids'];
 			$tArray = array();
+			$result = false;
+			$dbQuery = false;
 			switch (true)
 			{
 				case (count($ids)>1):
@@ -250,29 +255,43 @@ class Index extends controller
 			                                        ->where('id','in', $ids)
 	        		                                ->where('uid',$uid)
 	        		                                ->where('easypost_shipment_id','not null')
-	        		                                #->where('track_id','')
+	        		                                ->where('track_id','')
 	                        		                ->field('easypost_shipment_id as id')
 								->select();
-					$st = microtime(true);
+					$type =1;
 					foreach ($shipmentList as $key=>$sh_id)
 					{
 						
-						$t = new Muprocess($Event,'getTrackId',$sh_id);
-						$t->start();
-						printf("No %s Request took %f seconds to start \n", $sh_id['id'],microtime(true)-$st);
+						$data = compact('sh_id','type');
+						$t = new Muprocess($Event,'getTrackId',$data);
+						if ($t->start()) {
+						    /* synchronize in order to call wait */
+						    $t->synchronized(function($me){
+					                //$me->notify();
+						        $me->wait();
+						    }, $t);
+						}
 						$tArray[] = $t;
 					}
 					foreach ($tArray as $tKey=>$tValue)
 					{
-						printf("No %s Request took %f seconds to working \n", $tKey,microtime(true)-$st);
 						while($tArray[$tKey]->isRunning())
 						{
 							usleep(10);
 						}
-						printf("No %s Request took %f seconds to finish \n", $tKey,microtime(true)-$st);
 						if($tArray[$tKey]->join())
-							$message[] = array('id'=> $tKey,'message'=>$tArray[$tKey]->getResults());
-						printf("No %s Request took %f seconds to Done \n", $tKey,microtime(true)-$st);
+						{
+							$result = $tArray[$tKey]->getResults();
+							$getTrackID = $result["track_id"];
+							$dbQuery = $result["query"];
+							if (!empty($getTrackID))
+							{
+								$dbResult = Db::query($dbQuery);
+								$message[] = array('id'=> $tKey,'message'=>$getTrackID,'query'=>$dbResult);
+							}
+							else
+								$message[] = array('id'=> $tKey,'message'=>"false");
+						}
 					}
 					break;
 				}
@@ -285,11 +304,31 @@ class Index extends controller
 	        		                                ->where('track_id','')
 	                        		                ->field('easypost_shipment_id as id')
 								->select();
+					$type =1;
+					if(!$shipmentList)
+					{
+						$shipmentList = Db::table('think_shipment')
+			                                        ->where('id', $ids[0])
+	        		                                ->where('uid',$uid)
+	        		                                ->where('easypost_shipment_id','null')
+	        		                                ->where('track_id','')
+	                        		                ->field('order_id as id')
+								->select();
+						$type =2;
+					}
 					foreach ($shipmentList as $key=>$sh_id)
 					{
-						$getTrackID = $Event->getTrackId($sh_id);
+						$data = compact('sh_id','type');
+						$result = $Event->getTrackId($data);
+						$getTrackID = $result["track_id"];
+						$dbQuery = $result["query"];
 						if (!empty($getTrackID))
-							$message[] = array('id'=> $ids[$key],'message'=>$getTrackID);
+						{
+							$dbResult = Db::query($dbQuery);
+							if($type = 2)
+								$calculate = $Event->setFees($ids[0]);
+							$message[] = array('id'=> $ids[$key],'message'=>$getTrackID,'query'=>$dbResult,'calculate'=>$calculate);
+						}
 						else
 							$message[] = array('id'=> $ids[$key],'message'=>"false");
 					}
@@ -503,6 +542,9 @@ class Index extends controller
 	$shipmentList = array();
 	$sendId = array();
 	$tArray = array();
+	$pickupFees = 3;		//设置上门提货费用;
+	$residentialFees = 3.85;		//设置住宅派送费;
+
 	if (empty(Input::post('id')))
 	{
 		$sends = $shipment::all(function($query) 
@@ -541,7 +583,8 @@ class Index extends controller
 		        "state"   => $sendTo->state,
 		        "country"   => $sendTo->country,
 		        "zip"     => $sendTo->zipcode,
-		        "phone"   => $sendTo->phone
+		        "phone"   => $sendTo->phone,
+			"residential" => 0
 		);
 		$weight = $send->weight;
 		if ($weight==16)
@@ -553,9 +596,13 @@ class Index extends controller
 		$hscode = $send->hscode;
 		$pickup = $send->pickup;
 		$residential = $send->residential;
-		$pickupFees = 3;		//设置上门提货费用;
-		$residentialFees = 3.85;		//设置住宅派送费;
-		$orderId = $send->order_id;		//设置住宅派送费;
+		$orderId = $send->order_id;		//订单号`;
+/*		设置住宅派送费
+		if ($residential==1)
+		{
+			$to['residential'] = 1;
+		}
+*/
 		#$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		$buyData = compact('from','to','weight','service','packing','productInfo','amount','hscode','orderId');
 		$t = new Muprocess($Event,'buyLabel',$buyData);
@@ -588,6 +635,10 @@ class Index extends controller
 		} else {
 
 			$send = $sends[$tKey];
+			$service = $send->track_service;
+			$pickup = $send->pickup;
+			$residential = $send->residential;
+			//$packing = $packingList::where('id',$send->packing)->value('packing');
 			try {
 				$send->list_rate = $Event->discount($send->customer_id,$service,$data["selected_list_rate"],$data["selected_rate"],$packing);
 				$send->rate = $data["selected_rate"]; 
@@ -625,131 +676,13 @@ class Index extends controller
 	}
 	if (count($sendId)>1)
 	{
-		$addBatch = $Event->createBatch($shipmentList);
+		$format = 'pdf';
+		if ($uid==1)
+			$format = 'zpl';
+		$addBatch = $Event->createBatch($shipmentList,$format);
 		$batch->easypost_batch_id = $addBatch->id;
 		$batch->uid = $uid;	
 		$batch->label_amount = count($shipmentList);
-		$batch->label_list = implode(',',$sendId);
-		$batch->create_time = time();
-		$batch->save();
-		$result[] = array('id'=> $batch->id,"batch_id"=>$batch->easypost_batch_id,'message'=>"Save");
-	}
-	return json_encode($result);
-	//$view = new View();
-	//$view->systemTitle = "候鸟湾自助系统";
-	//$view->description = "USPS 运单 LABEL 购买";
-	//$view->tableData = json_encode($result);
-	//return $view->fetch();
-   }
-
-
-
-    public function buyLabel()
-    {
-	//$rules = new \app\index\model\AuthRule;
-	if (!Session::has('isLogin'))
-		return $this->error('请登陆','/index/login');
-	$shipment = new \app\index\model\Shipment;
-	$shipmentAddress = new \app\index\model\ShipmentAddress;
-	$packingList = new \app\index\model\ShipmentPacking;
-	$batch = new \app\index\model\ShipmentBatch;
-	$Event = controller('Shipment','event');
-	$uid = Session::get('uid');		
-	$result = array();
-	$shipmentList = array();
-	$sendId = array();
-	if (empty(Input::post('id')))
-	{
-		$sends = $shipment::all(function($query) 
-		{
-			$query->where('uid',Session::get('uid'))->where('buy',1)->where('status',1)->where('weight','>',0);
-		});
-	} else {
-		$sends = $shipment::all(function($query) 
-		{
-			$query->where('id',Input::post('id'))->where('uid',Session::get('uid'))->where('buy',1)->where('status',1)->where('weight','>',0);
-		});
-	
-	}
-	if (empty($sends))
-		return "没有需要购买的LABEL！";
-	foreach ($sends as $send)
-	{
-		$sendFrom = $shipmentAddress::get($send->send_from_id);
-		$sendTo = $shipmentAddress::get($send->send_to_id);
-	
-		$from = array(
-        		"name"    => $sendFrom->name,
-		        "street1" => $sendFrom->address1,
-			"street2" => $sendFrom->address2,
-		        "city"    => $sendFrom->city,
-		        "state"   => $sendFrom->state,
-		        "zip"     => $sendFrom->zipcode,
-		        "phone"   => $sendFrom->phone
-		);
-		$to = array(
-         		"name"    => $sendTo->name,
-		        "street1" => $sendTo->address1,
-			"street2" => $sendTo->address2,
-		        "city"    => $sendTo->city,
-		        "state"   => $sendTo->state,
-		        "country"   => $sendTo->country,
-		        "zip"     => $sendTo->zipcode,
-		        "phone"   => $sendTo->phone
-		);
-		$weight = $send->weight;
-		if ($weight==16)
-			$weight = 15.9;		//设置first class 16oz的计费重量
-		$service = $send->track_service;
-		$packing = $packingList::where('id',$send->packing)->value('packing');
-		$productInfo = $send->product_info;
-		$amount = $send->amount;
-		$hscode = $send->hscode;
-		$pickup = $send->pickup;
-		$residential = $send->residential;
-		$pickupFees = 3;		//设置上门提货费用;
-		$residentialFees = 3.85;		//设置住宅派送费;
-		$data = $Event->buyLabel($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
-		try {
-			//$send->list_rate = $data->selected_rate->list_rate; 
-			$send->list_rate = $Event->discount($send->customer_id,$service,$data->selected_rate->list_rate,$data->selected_rate->rate,$packing);
-			$send->rate = $data->selected_rate->rate; 
-			$send->track_id = $data->tracking_code;
-			$send->track_url = $data->postage_label->label_pdf_url; 
-			$send->zone = $data->usps_zone; 
-			$send->fee = $Event->getFee($send->weight_g,$send->amount,$send->type); 
-			$send->status = 2;
-			$send->easypost_shipment_id = $data->id;
-		} catch (Exception $e) {
-			//var_dump($e->getMessage());
-			$result[] = array('id'=> $send->id,'message'=>"Faile");
-			break;
-			//exit();		
-		}
-		switch($service)
-		{
-			case ('FEDEX_GROUND'):
-				if ($pickup==1)
-					$send->list_rate = $send->list_rate+$pickupFees;
-				if ($residential==1)
-					$send->list_rate = $send->list_rate+$residentialFees;
-				break;
-		}	
- 		$send->save();
-		$shipmentLog = new \app\index\model\ShipmentLog;
-		$shipmentLog->shipmentid = $send->id;
-		$shipmentLog->log = serialize(array($data->rates,$data->selected_rate,$data->postage_label));
-		$shipmentLog->save();
-		$result[] = array('id'=> $send->id,"rate"=>$send->list_rate,'message'=>"Succes");
-		$shipmentList[] = array('id'=>$data->id);
-		$sendId[] = $send->id;
-    	}
-	if (count($sendId)>1)
-	{
-		$addBatch = $Event->createBatch($shipmentList);
-		$batch->easypost_batch_id = $addBatch->id;
-		$batch->uid = $uid;	
-		$batch->label_amount = count($sendId);
 		$batch->label_list = implode(',',$sendId);
 		$batch->create_time = time();
 		$batch->save();
@@ -935,7 +868,8 @@ class Index extends controller
 		        "state"   => $sendTo->state,
 		        "country"   => $sendTo->country,
 		        "zip"     => $sendTo->zipcode,
-		        "phone"   => $sendTo->phone
+		        "phone"   => $sendTo->phone,
+			"residential" => 0
 		);
 		$weight = $send->weight;
 		if ($weight==16)
@@ -949,6 +883,12 @@ class Index extends controller
 		$pickupFees = 3;		//设置上门提货费用;
 		$residentialFees = 3.85;		//设置住宅派送费;
 		$packing = $packingList::where('id',$send->packing)->value('packing');
+/*		设置住宅派送费
+		if ($residential==1)
+		{
+			$to['residential'] = 1;
+		}
+*/
 		$data = $Event->getListRate($from,$to,$weight,$service,$packing,$productInfo,$amount,$hscode);
 		try {
 			$send->list_rate = $Event->discount($send->customer_id,$service,$data->list_rate,$data->rate,$packing); 
@@ -967,7 +907,12 @@ class Index extends controller
 					$send->list_rate = $send->list_rate+$pickupFees;
 				if ($residential==1)
 					$send->list_rate = $send->list_rate+$residentialFees;
-
+				break;
+			case ('Ground'):
+				if ($pickup==1)
+					$send->list_rate = $send->list_rate+$pickupFees;
+				if ($residential==1)
+					$send->list_rate = $send->list_rate+$residentialFees;
 				break;
 		}
 		switch($uid)
@@ -987,11 +932,189 @@ class Index extends controller
 	{
 		if (!Session::has('isLogin'))
 			return $this->error('请登陆','/index/login');
+		$uid = Session::get('uid');
 		$Event = controller('Shipment','event');
-		$Event->setWeight();
+		$Event->setWeight($uid);
 		return "Success";
 	}
 
+    public function compareRates()
+    {
+	$method = strtolower($_SERVER['REQUEST_METHOD']);
+        switch ($method){
+        	case 'get': // get请求处理代码
+			//echo "Get Requtest";
+			if (empty($_GET))
+			{
+				$put=file_get_contents('php://input');
+				$put=json_decode($put,1);
+				if (is_array($put))
+				{
+					foreach ($put as $key => $value) {
+            					$_GET[$key]=$value; 
+					}
+				}
+			}
+			$view = new View();
+			$view->systemTitle = "候鸟湾自助系统";
+			$view->description = "USPS 运单 LABEL 购买";
+			$view->tableData = false;
+			return $view->fetch();
+           		break;
+        	case 'put': // put请求处理代码
+			echo "Put Requtest";
+            		break;
+        	case 'post': // put请求处理代码
+			//echo "Post Requtest";
+			if (empty($_POST))
+			{
+				$put=file_get_contents('php://input');
+				$put=json_decode($put,1);
+				if (is_array($put))
+				{	foreach ($put as $key => $value) {
+            					$_POST[$key]=$value; 
+					}
+				}
+			}
+			//$shipmentAddress = new \app\index\model\ShipmentAddress;
+			$Event = controller('Shipment','event');
+			$result = array();
+			$sendFrom = Input::post('sendFrom');
+			switch($sendFrom)
+			{
+				case('94536'):
+					$sendFromCity = 'Fremont';
+					$sendFromState = 'CA';
+					break;
+				case('79925'):
+					$sendFromCity = "El Paso";
+					$sendFromState = 'TX';
+					break;
+			}
+			$sendTo = Input::post('toZipcode')?Input::post('toZipcode'):Input::post('sendTo');
+			$sendToCity = Input::post('toCity');
+			$sendToState = Input::post('toState');
+			$from = array(
+				"city"    => $sendFromCity,
+				"state"   => $sendFromState,
+				"zip"     => $sendFrom,
+				"country"   => 'US',
+				//"phone"   => $sendFrom->phone
+			);
+			$to = array(
+				"city"    => $sendToCity,
+				"state"   => $sendToState,
+				"country"   => 'US',
+				"zip"     => $sendTo,
+				"residential" => 0
+			);
+			$weightLbs = (Input::post('weightLbs')*16);
+			$weightOz = (Input::post('weightOz'));
+			$weight = $weightLbs+$weightOz;
+			if ($weight==16)
+				$weight = 15.9;		//设置first class 16oz的计费重量
+			//$hscode = Input::post('hscode');
+			//$residentialFees = 3.85;		//设置住宅派送费;
+			$packing = Input::post('length').'*'.Input::post('width').'*'.Input::post('height');
+			$data = $Event->compareListRate($from,$to,$weight,$packing);
+			$to['residential'] = 1;
+			$data2 = $Event->compareListRate($from,$to,$weight,$packing);
+			foreach ($data as $key=>$value)
+			{
+				switch(true)
+				{
+					case( ($key=='First') or ($key=='Ground') or ($key=='FEDEX_GROUND') ):
+						$service = $key;
+						break;
+					default:
+						$service = 'Priority';
+						break;
+				}
+				try {
+					$temp = array(
+							'birdsbay' => $Event->discount(Input::post('customer_id'),$service,$value->list_rate,$value->rate,$packing),
+							'services' => $service,
+						);
+				} catch (\Exception $e) {
+					var_dump($e->getMessage());
+					exit();		
+				}
+				$temp2 = $temp;
+				switch($key)
+				{
+					case ('FEDEX_GROUND'):
+						$temp['provider'] = 'Fedex';
+						$temp['type'] = '商业';
+						break;
+					case ('Ground'):
+						$temp['provider'] = 'UPS';
+						$temp['type'] = '商业';
+						break;
+					default:
+						$temp['provider'] = 'USPS';
+						$temp['type'] = '商业/住宅';
+						break;
+				}
+				$result[] = $temp;
+			}
+			foreach ($data2 as $key=>$value)
+			{
+				switch(true)
+				{
+					case( ($key=='First') or ($key=='Ground') or ($key=='FEDEX_GROUND') ):
+						$service = $key;
+						break;
+					default:
+						$service = 'Priority';
+						break;
+				}
+				try {
+					$temp = array(
+							'birdsbay' => $Event->discount(Input::post('customer_id'),$service,$value->list_rate,$value->rate,$packing),
+							'services' => $service,
+						);
+				} catch (\Exception $e) {
+					var_dump($e->getMessage());
+					exit();		
+				}
+				switch($key)
+				{
+					case ('FEDEX_GROUND'):
+						$temp['provider'] = 'Fedex';
+						$temp['type'] = '住宅';
+						$result[] = $temp;
+						break;
+					case ('Ground'):
+						$temp['provider'] = 'UPS';
+						$temp['type'] = '住宅';
+						$result[] = $temp;
+						break;
+				}
+			}
+
+			$view = new View();
+			$view->systemTitle = "候鸟湾自助系统";
+			$view->description = "USPS 运单 LABEL 购买";
+			$view->tableData = json_encode($result);
+			$view->sendToCity = $sendToCity;
+			$view->sendToState = $sendToState;
+			$view->sendTo = $sendTo;
+			$view->weight = $weight;
+			$view->length = Input::post('length');
+			$view->width = Input::post('width');
+			$view->height = Input::post('height');
+			$view->weightLbs = Input::post('weightLbs');
+			$view->weightOz = Input::post('weightOz');
+			$view->customer_id = Input::post('customer_id');
+			return $view->fetch();
+
+			//return $this->response($result,'json',200);
+            		break;
+		default:
+			return $this->response("Bad Request!",$type='json',$code=203);
+			break;
+		}
+   }
 
 }
 
